@@ -133,9 +133,11 @@ public class BridgeHandler
 
         // Fetch tools from all connected MCP servers
         var mcpTools = await _mcp.GetAllToolsAsync();
-        var openAiTools = mcpTools.Select(t => ConvertToOpenAiFunction(t.Tool)).ToList();
-        _logger.LogInformation("Loaded {ToolCount} tools from {ServerCount} MCP servers", 
-            openAiTools.Count, mcpTools.Select(t => t.ServerId).Distinct().Count());
+        // Filter out tools with missing names to prevent OpenAI API validation errors
+        var validTools = mcpTools.Where(t => !string.IsNullOrEmpty(t.Tool.Name)).ToList();
+        var openAiTools = validTools.Select(t => ConvertToOpenAiFunction(t.Tool)).ToList();
+        _logger.LogInformation("Loaded {ToolCount} valid tools from {ServerCount} MCP servers (filtered {FilteredCount} invalid)", 
+            openAiTools.Count, validTools.Select(t => t.ServerId).Distinct().Count(), mcpTools.Count - validTools.Count);
 
         var request = new ChatRequest
         {
@@ -306,22 +308,21 @@ public class BridgeHandler
     }
 
     /// <summary>
-    /// Converts an MCP tool definition to OpenAI function calling format
+    /// Converts an MCP tool definition to OpenAI Responses API function format
     /// </summary>
     private object ConvertToOpenAiFunction(McpTool tool)
     {
-        // OpenAI function calling format
+        // OpenAI Responses API function format (different from Chat Completions API!)
+        // Responses API expects: { type, name, description, parameters }
+        // NOT: { type, function: { name, description, parameters } }
         return new
         {
             type = "function",
-            function = new
-            {
-                name = tool.Name,
-                description = tool.Description ?? "",
-                parameters = tool.InputSchema.HasValue 
-                    ? JsonSerializer.Deserialize<object>(tool.InputSchema.Value.GetRawText())
-                    : new { type = "object", properties = new { } }
-            }
+            name = tool.Name,
+            description = tool.Description ?? "",
+            parameters = tool.InputSchema.HasValue 
+                ? JsonSerializer.Deserialize<object>(tool.InputSchema.Value.GetRawText())
+                : new { type = "object", properties = new { } }
         };
     }
 

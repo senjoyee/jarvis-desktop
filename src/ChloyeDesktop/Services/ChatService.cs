@@ -70,6 +70,9 @@ public class ChatService
         {
             bodyObj["tools"] = request.Tools;
             _logger.LogInformation("Including {ToolCount} tools in request", request.Tools.Count);
+            // Debug: log the first tool structure
+            var debugJson = JsonSerializer.Serialize(request.Tools[0], new JsonSerializerOptions { WriteIndented = true });
+            _logger.LogDebug("First tool structure: {Tool}", debugJson);
         }
 
         var jsonOptions = new JsonSerializerOptions
