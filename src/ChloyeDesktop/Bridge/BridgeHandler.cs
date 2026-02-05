@@ -139,11 +139,26 @@ public class BridgeHandler
         _logger.LogInformation("Loaded {ToolCount} valid tools from {ServerCount} MCP servers (filtered {FilteredCount} invalid)", 
             openAiTools.Count, validTools.Select(t => t.ServerId).Distinct().Count(), mcpTools.Count - validTools.Count);
 
+        // Build system prompt with MCP context
+        var connectedServers = _mcp.ListServers()
+            .Where(s => _mcp.GetStatus(s.Id) == McpConnectionStatus.Connected)
+            .Select(s => s.Name)
+            .ToList();
+        
+        var systemPrompt = BuildSystemPrompt(connectedServers, validTools);
+        
+        // Insert system message at the beginning
+        var messagesWithSystem = new List<ChatMessage>
+        {
+            new ChatMessage { Role = "system", Content = systemPrompt }
+        };
+        messagesWithSystem.AddRange(chatMessages);
+
         var request = new ChatRequest
         {
             Model = model,
             ReasoningEffort = reasoningEffort,
-            Messages = chatMessages,
+            Messages = messagesWithSystem,
             Tools = openAiTools.Count > 0 ? openAiTools : null
         };
 
@@ -324,6 +339,55 @@ public class BridgeHandler
                 ? JsonSerializer.Deserialize<object>(tool.InputSchema.Value.GetRawText())
                 : new { type = "object", properties = new { } }
         };
+    }
+
+    /// <summary>
+    /// Builds a system prompt with MCP context
+    /// </summary>
+    private string BuildSystemPrompt(List<string> connectedServers, List<McpToolWithServer> tools)
+    {
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine("You are Chloye, a helpful AI assistant running in a desktop application.");
+        sb.AppendLine();
+        sb.AppendLine("## MCP (Model Context Protocol) Integration");
+        sb.AppendLine("This application supports MCP servers which provide you with tools to interact with external systems.");
+        sb.AppendLine();
+        
+        if (connectedServers.Count > 0)
+        {
+            sb.AppendLine($"**Connected MCP Servers ({connectedServers.Count}):**");
+            foreach (var server in connectedServers)
+            {
+                sb.AppendLine($"- {server}");
+            }
+            sb.AppendLine();
+        }
+        else
+        {
+            sb.AppendLine("**No MCP servers are currently connected.**");
+            sb.AppendLine();
+        }
+        
+        if (tools.Count > 0)
+        {
+            sb.AppendLine($"**Available Tools ({tools.Count}):**");
+            foreach (var tool in tools.Take(20)) // Limit to avoid token bloat
+            {
+                sb.AppendLine($"- `{tool.Tool.Name}` ({tool.ServerName}): {tool.Tool.Description ?? "No description"}");
+            }
+            if (tools.Count > 20)
+            {
+                sb.AppendLine($"- ... and {tools.Count - 20} more tools");
+            }
+            sb.AppendLine();
+            sb.AppendLine("Use these tools when appropriate to help the user. When asked about MCP servers or available tools, refer to the list above.");
+        }
+        else
+        {
+            sb.AppendLine("No tools are currently available. The user may need to connect MCP servers first.");
+        }
+        
+        return sb.ToString();
     }
 
     /// <summary>
