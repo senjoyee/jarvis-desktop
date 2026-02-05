@@ -23,8 +23,8 @@ const REASONING_EFFORT_LEVELS = [
 export default function ChatPage() {
   const { conversationId } = useParams()
   const [input, setInput] = useState('')
-  const [selectedModel, setSelectedModel] = useState('gpt-5.2')
-  const [reasoningEffort, setReasoningEffort] = useState('medium')
+  const [selectedModel, setSelectedModel] = useState('gpt-5-mini')
+  const [reasoningEffort, setReasoningEffort] = useState('none')
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
@@ -54,7 +54,7 @@ export default function ChatPage() {
 
   const handleSend = async () => {
     if (!input.trim() || isStreaming) return
-    
+
     const content = input.trim()
     setInput('')
     await sendMessage(content, selectedModel, reasoningEffort)
