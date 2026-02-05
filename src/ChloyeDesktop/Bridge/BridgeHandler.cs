@@ -271,6 +271,24 @@ public class BridgeHandler
                 messageId = assistantMessage.Id.ToString()
             });
         }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error during streaming");
+            var errorText = $"⚠️ Error: {ex.Message}";
+            fullContent.Append(errorText);
+            _conversations.UpdateMessageContent(assistantMessage.Id, fullContent.ToString());
+            
+            // Send error to UI
+            SendStreamEvent("stream.delta", new
+            {
+                messageId = assistantMessage.Id.ToString(),
+                delta = errorText
+            });
+            SendStreamEvent("stream.done", new
+            {
+                messageId = assistantMessage.Id.ToString()
+            });
+        }
 
         return new
         {
