@@ -187,11 +187,15 @@ export const useStore = create<AppState>((set, get) => ({
       }
     } catch (err) {
       console.error('Failed to send message:', err)
-      // Remove temp messages on error
+      // Keep user message but replace assistant placeholder with error message
+      const errorMessage = err instanceof Error ? err.message : 'An error occurred'
       set((state) => ({
-        messages: state.messages.filter(
-          (msg) => msg.id !== tempUserMsg.id && msg.id !== tempAssistantMsg.id
-        ),
+        messages: state.messages.map((msg) => {
+          if (msg.id === tempAssistantMsg.id) {
+            return { ...msg, content: `⚠️ Error: ${errorMessage}` }
+          }
+          return msg
+        }),
         isStreaming: false
       }))
     }
