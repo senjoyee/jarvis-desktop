@@ -6,47 +6,57 @@ A Windows desktop chat client with MCP (Model Context Protocol) support, built w
 
 - **Chat with OpenAI models** - Stream responses with per-message model selection
 - **Conversation management** - Create, rename, delete conversations with SQLite persistence
-- **MCP Server support** - Add local (stdio) and remote (SSE) MCP servers
+- **MCP Server support** - Add local (stdio), remote (SSE), and HTTP MCP servers
 - **Tool management** - List tools, manually invoke tools for testing
 - **Secure credential storage** - API keys stored in Windows Credential Manager
 
-## Prerequisites
+## 🚀 Quick Start
 
-- Windows 10/11
-- [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
-- [Node.js 18+](https://nodejs.org/)
-- [WebView2 Runtime](https://developer.microsoft.com/en-us/microsoft-edge/webview2/) (usually pre-installed on Windows 10/11)
+### Prerequisites
+
+| Requirement | Version | Download |
+|-------------|---------|----------|
+| Windows | 10/11 | - |
+| .NET 8 SDK | 8.0+ | [Download](https://dotnet.microsoft.com/download/dotnet/8.0) |
+| Node.js | 18+ | [Download](https://nodejs.org/) |
+| WebView2 Runtime | Latest | Usually pre-installed on Windows 10/11 |
+
+### Run the Application
+
+```powershell
+# 1. Clone the repository
+git clone https://github.com/yourname/Chloye_desktop.git
+cd Chloye_desktop
+
+# 2. Build the React UI
+cd ui
+npm install
+npm run build
+
+# 3. Run the application
+cd ../src/ChloyeDesktop
+dotnet run
+```
+
+The app should launch and you can configure your OpenAI API key in Settings.
 
 ## Development Setup
 
-### 1. Install UI dependencies
+For active development with hot-reload on the UI:
 
-```bash
-cd ui
-npm install
-```
-
-### 2. Start the UI dev server
-
-```bash
+```powershell
+# Terminal 1: Start the React dev server
 cd ui
 npm run dev
-```
+# → Runs on http://localhost:5173
 
-This starts Vite on http://localhost:5173
-
-### 3. Run the WPF application
-
-In a separate terminal:
-
-```bash
+# Terminal 2: Run the WPF app in dev mode
+$env:CHLOYE_DEV_MODE="1"
 cd src/ChloyeDesktop
 dotnet run
 ```
 
 Or open `ChloyeDesktop.sln` in Visual Studio and press F5.
-
-The app will automatically connect to the Vite dev server when running in debug mode.
 
 ## Project Structure
 
@@ -85,44 +95,61 @@ The key is stored in Windows Credential Manager under `ChloyeDesktop/OpenAI`.
 
 ### MCP Servers
 
-#### Local Server (stdio)
-1. Go to MCP Servers
-2. Click "Add Server"
-3. Select "Local (stdio)"
-4. Enter command (e.g., `node`, `python`, `npx`)
-5. Enter arguments
-6. Click "Add Server" then "Start"
+MCP servers are configured via the config file at:
+`%LOCALAPPDATA%\ChloyeDesktop\mcp_config.json`
 
-#### Remote Server (SSE)
-1. Go to MCP Servers
-2. Click "Add Server"
-3. Select "Remote (SSE)"
-4. Enter server URL
-5. Configure authentication if needed
-6. Click "Add Server" then "Connect"
+Example configuration:
+```json
+{
+  "mcpServers": {
+    "filesystem": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "C:/path/to/folder"]
+    },
+    "remote-server": {
+      "type": "http",
+      "url": "https://your-mcp-server.com/mcp"
+    }
+  }
+}
+```
 
 ## Data Storage
 
-- **Database**: `%LOCALAPPDATA%\ChloyeDesktop\chloye.db`
-- **Credentials**: Windows Credential Manager
-- **WebView2 data**: `%LOCALAPPDATA%\ChloyeDesktop\WebView2`
+| Data | Location |
+|------|----------|
+| Database | `%LOCALAPPDATA%\ChloyeDesktop\jarvis.db` |
+| MCP Config | `%LOCALAPPDATA%\ChloyeDesktop\mcp_config.json` |
+| Credentials | Windows Credential Manager |
+| WebView2 Cache | `%LOCALAPPDATA%\ChloyeDesktop\WebView2` |
 
-## Building for Production
+## 📦 Building for Production
 
-### Build UI
+### Build a Distributable Executable
 
-```bash
+```powershell
+# 1. Build the UI
 cd ui
 npm run build
+
+# 2. Publish as self-contained single file
+cd ../src/ChloyeDesktop
+dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:EnableCompressionInSingleFile=true
 ```
 
-This outputs to `src/ChloyeDesktop/wwwroot/`
+The executable will be at:
+`src/ChloyeDesktop/bin/Release/net8.0-windows/win-x64/publish/ChloyeDesktop.exe`
 
-### Build WPF Application
+This creates a **single ~80-100MB executable** that includes the .NET runtime and all dependencies. Users don't need to install anything.
 
-```bash
-dotnet publish src/ChloyeDesktop -c Release -r win-x64 --self-contained
-```
+### Build Options
+
+| Option | Command Flag | Result |
+|--------|--------------|--------|
+| Self-contained | `--self-contained true` | Includes .NET runtime |
+| Single file | `-p:PublishSingleFile=true` | One .exe file |
+| Compressed | `-p:EnableCompressionInSingleFile=true` | Smaller file size |
+| Framework-dependent | `--self-contained false` | Requires .NET 8 installed |
 
 ## Tech Stack
 
@@ -137,3 +164,4 @@ dotnet publish src/ChloyeDesktop -c Release -r win-x64 --self-contained
 ## License
 
 MIT
+
