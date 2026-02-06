@@ -50,6 +50,21 @@ public class McpManager
         // Config file is now the source of truth - no database storage needed
     }
 
+    public async Task InitializeAsync()
+    {
+        var servers = ListServers();
+        _logger.LogInformation("Auto-starting {Count} MCP servers...", servers.Count);
+        
+        foreach (var server in servers)
+        {
+            if (!server.Disabled)
+            {
+                // Fire and forget individual server starts so they don't block each other or startup
+                _ = StartServer(server.Id);
+            }
+        }
+    }
+
     #region Server Configuration CRUD
 
     public List<McpServerConfig> ListServers()
@@ -83,11 +98,30 @@ public class McpManager
                 {
                     Id = stableId,
                     Name = name,
-                    Type = "local",
-                    Command = config.GetProperty("command").GetString()!,
+                    Type = "local", // Default to local
+                    Command = "",   // Default to empty
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow
                 };
+
+                if (config.TryGetProperty("type", out var typeProp))
+                {
+                    var typeStr = typeProp.GetString()?.ToLower();
+                    if (typeStr == "http" || typeStr == "remote")
+                    {
+                        serverConfig.Type = typeStr;
+                    }
+                }
+
+                if (config.TryGetProperty("command", out var command))
+                {
+                    serverConfig.Command = command.GetString() ?? "";
+                }
+
+                if (config.TryGetProperty("url", out var url))
+                {
+                    serverConfig.Url = url.GetString();
+                }
 
                 if (config.TryGetProperty("args", out var args))
                 {
@@ -107,6 +141,11 @@ public class McpManager
                 if (config.TryGetProperty("env", out var env))
                 {
                     serverConfig.EnvJson = env.GetRawText();
+                }
+
+                if (config.TryGetProperty("disabled", out var disabled))
+                {
+                    serverConfig.Disabled = disabled.GetBoolean();
                 }
 
                 serverList.Add(serverConfig);
@@ -185,6 +224,10 @@ public class McpManager
         {
             return await ConnectRemoteServer(server);
         }
+        else if (server.Type == "http")
+        {
+            return await ConnectHttpServer(server);
+        }
 
         return false;
     }
@@ -257,6 +300,31 @@ public class McpManager
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to connect to remote MCP server: {Name}", config.Name);
+            _connections.TryRemove(config.Id, out _);
+            return false;
+        }
+    }
+
+    private async Task<bool> ConnectHttpServer(McpServerConfig config)
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(config.Url))
+            {
+                _logger.LogError("HTTP MCP server has no URL configured");
+                return false;
+            }
+
+            var connection = new McpHttpConnection(config, _httpClient, _logger);
+            _connections[config.Id] = connection; // Store connection
+            
+            await connection.ConnectAsync();
+            
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to connect to HTTP server: {Name}", config.Name);
             _connections.TryRemove(config.Id, out _);
             return false;
         }

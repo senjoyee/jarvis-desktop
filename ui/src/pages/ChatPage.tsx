@@ -1,12 +1,13 @@
 import { useState, useRef, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
 import { Button, Select } from '@fluentui/react-components'
-import { SendRegular, StopRegular } from '@fluentui/react-icons'
+import { SendRegular, StopRegular, ChevronDownRegular, ChevronRightRegular } from '@fluentui/react-icons'
 import ReactMarkdown from 'react-markdown'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import { useStore } from '../store'
 import StreamingText from '../components/StreamingText'
+import type { ToolCallDetail, TokenUsage } from '../types'
 
 const AVAILABLE_MODELS = [
   { value: 'gpt-5.2', label: 'GPT-5.2' },
@@ -153,6 +154,19 @@ export default function ChatPage() {
                 </span>
               )}
             </div>
+
+            {message.role === 'assistant' && message.reasoning && (
+              <ReasoningBlock reasoning={message.reasoning} isStreaming={isStreaming && message.id === streamingMessageId} />
+            )}
+
+            {message.role === 'assistant' && message.toolCalls && message.toolCalls.length > 0 && (
+              <div className="tool-calls-section">
+                {message.toolCalls.map((tc, idx) => (
+                  <ToolCallBlock key={`${message.id}-tc-${idx}`} toolCall={tc} />
+                ))}
+              </div>
+            )}
+
             <div className="message-content">
               {isStreaming && message.id === streamingMessageId ? (
                 <StreamingText messageId={message.id} initialContent={message.content || ''} />
@@ -182,6 +196,10 @@ export default function ChatPage() {
                 </ReactMarkdown>
               )}
             </div>
+
+            {message.role === 'assistant' && message.tokenUsage && (
+              <TokenUsageDisplay usage={message.tokenUsage} />
+            )}
           </div>
         ))}
         <div ref={messagesEndRef} />
@@ -247,6 +265,99 @@ export default function ChatPage() {
           </div>
         </div>
       </div>
+    </div>
+  )
+}
+
+function ReasoningBlock({ reasoning, isStreaming }: { reasoning: string; isStreaming: boolean }) {
+  const [expanded, setExpanded] = useState(false)
+
+  // Auto-expand while streaming
+  const isOpen = isStreaming || expanded
+
+  return (
+    <div className="reasoning-block">
+      <button
+        className="reasoning-toggle"
+        onClick={() => setExpanded(!expanded)}
+      >
+        {isOpen ? <ChevronDownRegular /> : <ChevronRightRegular />}
+        <span className="reasoning-label">
+          {isStreaming ? 'Thinking...' : 'Thought process'}
+        </span>
+        {isStreaming && <span className="reasoning-spinner" />}
+      </button>
+      {isOpen && (
+        <div className="reasoning-content">
+          {reasoning}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function TokenUsageDisplay({ usage }: { usage: TokenUsage }) {
+  const outputMinusReasoning = usage.outputTokens - usage.reasoningTokens
+
+  return (
+    <div className="token-usage">
+      <span className="token-usage-item">
+        <span className="token-usage-label">In:</span> {usage.inputTokens.toLocaleString()}
+      </span>
+      {usage.reasoningTokens > 0 && (
+        <span className="token-usage-item">
+          <span className="token-usage-label">Reasoning:</span> {usage.reasoningTokens.toLocaleString()}
+        </span>
+      )}
+      <span className="token-usage-item">
+        <span className="token-usage-label">Out:</span> {outputMinusReasoning.toLocaleString()}
+      </span>
+      <span className="token-usage-item token-usage-total">
+        <span className="token-usage-label">Total:</span> {usage.totalTokens.toLocaleString()}
+      </span>
+    </div>
+  )
+}
+
+function ToolCallBlock({ toolCall }: { toolCall: ToolCallDetail }) {
+  const [expanded, setExpanded] = useState(false)
+
+  let parsedArgs = toolCall.arguments
+  try {
+    parsedArgs = JSON.stringify(JSON.parse(toolCall.arguments), null, 2)
+  } catch {
+    // keep raw string
+  }
+
+  return (
+    <div className={`tool-call-block ${toolCall.status}`}>
+      <button
+        className="tool-call-toggle"
+        onClick={() => setExpanded(!expanded)}
+      >
+        {expanded ? <ChevronDownRegular /> : <ChevronRightRegular />}
+        <span className="tool-call-icon">
+          {toolCall.status === 'calling' ? '\u2699\uFE0F' : toolCall.success ? '\u2705' : '\u274C'}
+        </span>
+        <span className="tool-call-name">{toolCall.toolName}</span>
+        {toolCall.status === 'calling' && <span className="reasoning-spinner" />}
+      </button>
+      {expanded && (
+        <div className="tool-call-details">
+          <div className="tool-call-section">
+            <div className="tool-call-section-label">Arguments</div>
+            <pre className="tool-call-pre">{parsedArgs}</pre>
+          </div>
+          {toolCall.result && (
+            <div className="tool-call-section">
+              <div className="tool-call-section-label">
+                Result {toolCall.success === false && <span className="tool-call-error-tag">Error</span>}
+              </div>
+              <pre className="tool-call-pre">{toolCall.result}</pre>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }

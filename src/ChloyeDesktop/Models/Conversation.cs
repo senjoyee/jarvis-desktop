@@ -36,6 +36,7 @@ public class McpServerConfig
     public string? Url { get; set; }
     public string? AuthType { get; set; } // none, bearer
     public string? AuthRef { get; set; } // credential manager key
+    public bool Disabled { get; set; }
     
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }

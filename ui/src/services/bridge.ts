@@ -1,23 +1,36 @@
 import { v4 as uuidv4 } from 'uuid'
-import type { BridgeRequest, BridgeResponse } from '../types'
+import type { BridgeRequest, BridgeResponse, TokenUsage } from '../types'
 import { appendToStreamingText } from '../components/StreamingText'
 
 const pendingRequests = new Map<string, { resolve: (value: unknown) => void; reject: (error: Error) => void }>()
 
 // Stream event handlers
 type StreamEventHandler = (data: { messageId: string; delta?: string }) => void
+type StreamDoneHandler = (data: { messageId: string; usage?: TokenUsage }) => void
+type ToolCallStartHandler = (data: { messageId: string; toolName: string; arguments: string }) => void
+type ToolCallResultHandler = (data: { messageId: string; toolName: string; result: string; success: boolean }) => void
+
 let onStreamStart: StreamEventHandler | null = null
 let onStreamDelta: StreamEventHandler | null = null
-let onStreamDone: StreamEventHandler | null = null
+let onStreamDone: StreamDoneHandler | null = null
+let onStreamReasoning: StreamEventHandler | null = null
+let onStreamToolCallStart: ToolCallStartHandler | null = null
+let onStreamToolCallResult: ToolCallResultHandler | null = null
 
 export function setStreamHandlers(handlers: {
   onStart?: StreamEventHandler
   onDelta?: StreamEventHandler
-  onDone?: StreamEventHandler
+  onDone?: StreamDoneHandler
+  onReasoning?: StreamEventHandler
+  onToolCallStart?: ToolCallStartHandler
+  onToolCallResult?: ToolCallResultHandler
 }) {
   onStreamStart = handlers.onStart || null
   onStreamDelta = handlers.onDelta || null
   onStreamDone = handlers.onDone || null
+  onStreamReasoning = handlers.onReasoning || null
+  onStreamToolCallStart = handlers.onToolCallStart || null
+  onStreamToolCallResult = handlers.onToolCallResult || null
 }
 
 declare global {
@@ -65,19 +78,28 @@ function initBridge() {
   }
 }
 
-function handleStreamEvent(event: { type: string; data: { messageId: string; delta?: string } }) {
+function handleStreamEvent(event: { type: string; data: Record<string, unknown> }) {
   switch (event.type) {
     case 'stream.start':
-      onStreamStart?.(event.data)
+      onStreamStart?.(event.data as { messageId: string; delta?: string })
       break
     case 'stream.delta':
       // Accumulate content for throttled markdown rendering
-      appendToStreamingText(event.data.messageId, event.data.delta || '')
+      appendToStreamingText((event.data as { messageId: string }).messageId, (event.data as { delta?: string }).delta || '')
       // Also update store for final state
-      onStreamDelta?.(event.data)
+      onStreamDelta?.(event.data as { messageId: string; delta?: string })
       break
     case 'stream.done':
-      onStreamDone?.(event.data)
+      onStreamDone?.(event.data as { messageId: string; usage?: TokenUsage })
+      break
+    case 'stream.reasoning':
+      onStreamReasoning?.(event.data as { messageId: string; delta?: string })
+      break
+    case 'stream.toolCallStart':
+      onStreamToolCallStart?.(event.data as { messageId: string; toolName: string; arguments: string })
+      break
+    case 'stream.toolCallResult':
+      onStreamToolCallResult?.(event.data as { messageId: string; toolName: string; result: string; success: boolean })
       break
   }
 }
@@ -102,13 +124,14 @@ export async function invoke<T = unknown>(method: string, params?: Record<string
       }, 100)
     }
 
-    // Timeout after 30 seconds
+    // Timeout - longer for message sends (reasoning can take minutes)
+    const timeoutMs = method === 'messages.send' ? 300000 : 30000
     setTimeout(() => {
       if (pendingRequests.has(id)) {
         pendingRequests.delete(id)
         reject(new Error('Request timeout'))
       }
-    }, 30000)
+    }, timeoutMs)
   })
 }
 

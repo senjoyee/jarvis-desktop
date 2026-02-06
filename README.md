@@ -1,4 +1,4 @@
-# Chloye Desktop
+# Jarvis Desktop
 
 A Windows desktop chat client with MCP (Model Context Protocol) support, built with WPF + WebView2 hosting a React UI.
 

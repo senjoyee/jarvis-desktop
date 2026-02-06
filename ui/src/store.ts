@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { invoke, setStreamHandlers } from './services/bridge'
-import type { Conversation, Message, McpServer, McpTool } from './types'
+import type { Conversation, Message, McpServer, McpTool, ToolCallDetail, TokenUsage } from './types'
 
 interface AppState {
   // Conversations
@@ -36,7 +36,10 @@ interface AppState {
   // Streaming handlers
   handleStreamStart: (messageId: string) => void
   handleStreamDelta: (messageId: string, delta: string) => void
-  handleStreamDone: (messageId: string) => void
+  handleStreamDone: (messageId: string, usage?: TokenUsage) => void
+  handleStreamReasoning: (messageId: string, delta: string) => void
+  handleStreamToolCallStart: (messageId: string, toolName: string, args: string) => void
+  handleStreamToolCallResult: (messageId: string, toolName: string, result: string, success: boolean) => void
   
   loadMcpServers: () => Promise<void>
   addMcpServer: (config: Partial<McpServer>) => Promise<void>
@@ -169,11 +172,21 @@ export const useStore = create<AppState>((set, get) => ({
         { conversationId: currentConversationId, content, model, reasoningEffort }
       )
       
+      const realAssistantId = result.assistantMessage.id?.toString()
+      
       // Replace temp messages with real ones (with correct IDs from backend)
+      // Preserve reasoning and toolCalls accumulated during streaming
       set((state) => ({
         messages: state.messages.map((msg) => {
           if (msg.id === tempUserMsg.id) return result.userMessage
-          if (msg.id === tempAssistantMsg.id) return result.assistantMessage
+          if (msg.id === tempAssistantMsg.id || msg.id === realAssistantId) {
+            return {
+              ...result.assistantMessage,
+              reasoning: msg.reasoning,
+              toolCalls: msg.toolCalls,
+              tokenUsage: msg.tokenUsage
+            }
+          }
           return msg
         }),
         isStreaming: false
@@ -188,11 +201,13 @@ export const useStore = create<AppState>((set, get) => ({
     } catch (err) {
       console.error('Failed to send message:', err)
       // Keep user message but replace assistant placeholder with error message
+      // The temp ID may have been replaced by handleStreamStart, so check both
       const errorMessage = err instanceof Error ? err.message : 'An error occurred'
+      const streamingId = get()._streamingMsgId
       set((state) => ({
         messages: state.messages.map((msg) => {
-          if (msg.id === tempAssistantMsg.id) {
-            return { ...msg, content: `⚠️ Error: ${errorMessage}` }
+          if (msg.id === tempAssistantMsg.id || msg.id === streamingId) {
+            return { ...msg, content: (msg.content || '') + `\n\n⚠️ Error: ${errorMessage}` }
           }
           return msg
         }),
@@ -301,8 +316,71 @@ export const useStore = create<AppState>((set, get) => ({
     })
   },
 
-  handleStreamDone: (_messageId) => {
+  handleStreamDone: (_messageId, usage) => {
+    if (usage) {
+      set((state) => {
+        const msgIndex = state.messages.findIndex((m) => m.id === _messageId)
+        if (msgIndex === -1) return state
+        const newMessages = [...state.messages]
+        newMessages[msgIndex] = { ...newMessages[msgIndex], tokenUsage: usage }
+        return { messages: newMessages }
+      })
+    }
     set({ streamingMessageId: null, isStreaming: false, _pendingDelta: '', _rafId: null, _streamingMsgId: null })
+  },
+
+  handleStreamReasoning: (messageId, delta) => {
+    set((state) => {
+      const msgIndex = state.messages.findIndex((m) => m.id === messageId)
+      if (msgIndex === -1) return state
+      const newMessages = [...state.messages]
+      newMessages[msgIndex] = {
+        ...newMessages[msgIndex],
+        reasoning: (newMessages[msgIndex].reasoning || '') + delta
+      }
+      return { messages: newMessages }
+    })
+  },
+
+  handleStreamToolCallStart: (messageId, toolName, args) => {
+    set((state) => {
+      const msgIndex = state.messages.findIndex((m) => m.id === messageId)
+      if (msgIndex === -1) return state
+      const newMessages = [...state.messages]
+      const existing = newMessages[msgIndex].toolCalls || []
+      const newToolCall: ToolCallDetail = {
+        toolName,
+        arguments: args,
+        status: 'calling'
+      }
+      newMessages[msgIndex] = {
+        ...newMessages[msgIndex],
+        toolCalls: [...existing, newToolCall]
+      }
+      return { messages: newMessages }
+    })
+  },
+
+  handleStreamToolCallResult: (messageId, toolName, result, success) => {
+    set((state) => {
+      const msgIndex = state.messages.findIndex((m) => m.id === messageId)
+      if (msgIndex === -1) return state
+      const newMessages = [...state.messages]
+      const toolCalls = [...(newMessages[msgIndex].toolCalls || [])]
+      // Find the last tool call with this name that is still 'calling'
+      let tcIndex = -1
+      for (let i = toolCalls.length - 1; i >= 0; i--) {
+        if (toolCalls[i].toolName === toolName && toolCalls[i].status === 'calling') {
+          tcIndex = i
+          break
+        }
+      }
+      if (tcIndex !== -1) {
+        toolCalls[tcIndex] = { ...toolCalls[tcIndex], result, success, status: 'done' }
+      }
+      newMessages[msgIndex] = { ...newMessages[msgIndex], toolCalls }
+      return { messages: newMessages }
+    })
   }
 }))
 
@@ -310,5 +388,8 @@ export const useStore = create<AppState>((set, get) => ({
 setStreamHandlers({
   onStart: (data) => useStore.getState().handleStreamStart(data.messageId),
   onDelta: (data) => useStore.getState().handleStreamDelta(data.messageId, data.delta || ''),
-  onDone: (data) => useStore.getState().handleStreamDone(data.messageId)
+  onDone: (data) => useStore.getState().handleStreamDone(data.messageId, data.usage),
+  onReasoning: (data) => useStore.getState().handleStreamReasoning(data.messageId, data.delta || ''),
+  onToolCallStart: (data) => useStore.getState().handleStreamToolCallStart(data.messageId, data.toolName, data.arguments),
+  onToolCallResult: (data) => useStore.getState().handleStreamToolCallResult(data.messageId, data.toolName, data.result, data.success)
 })

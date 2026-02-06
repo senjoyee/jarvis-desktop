@@ -1,0 +1,59 @@
+NASDAQ hardest-hit stocks over the last 2–3 trading days (best-effort; incomplete)
+As of: 2026-02-05
+
+Request:
+- “Top 20 stocks listed on NASDAQ that got hit the hardest in the last 2–3 days”
+
+Result (limitation):
+- A complete, verifiable “top 20” ranked list over the last 2–3 sessions could not be produced from the available Perplexity search results.
+- The sources returned were primarily news summaries and did not include a downloadable NASDAQ screener output or a comprehensive list of all NASDAQ tickers with 2–3 day cumulative % changes.
+
+Closest available data found (largest *single-day* declines mentioned in reputable articles within the last ~3 sessions):
+
+Ranked by magnitude of the reported single-day % drop
+
+1) PYPL — PayPal Holdings, Inc.
+   Date: 2026-02-03
+   Move: -18.29% (reported)
+   Source: https://www.thestreet.com/latest-news/stock-market-today-feb-3-software-stocks-landslide-after-paypals-poor-earnings-nasdaq-falls-1
+
+2) NVO — Novo Nordisk A/S
+   Date: 2026-02-04
+   Move: -14.6% (reported)
+   Source: https://www.nasdaq.com/articles/stock-market-news-feb-4-2026
+
+3) CRM — Salesforce, Inc.
+   Date: 2026-02-04
+   Move: -6.9% (reported)
+   Source: https://www.nasdaq.com/articles/stock-market-news-feb-4-2026
+
+4) MSFT — Microsoft Corporation
+   Date: 2026-02-04
+   Move: -2.9% (reported)
+   Source: https://www.nasdaq.com/articles/stock-market-news-feb-4-2026
+
+5) NVDA — NVIDIA Corporation
+   Date: 2026-02-04
+   Move: -2.8% (reported)
+   Source: https://www.commbank.com.au/articles/newsroom/2026/02/tech-stocks-pull-wall-street-lower-as-gold-and-silver-bounce-back.html
+
+Notes:
+- The above list is NOT a full “top 20 biggest losers” list; it is only what was explicitly enumerated with % moves in the available search results.
+- The request requires either:
+  (a) a NASDAQ stock screener snapshot sorted by performance over a configurable period, or
+  (b) historical daily closes for all NASDAQ-listed tickers to compute cumulative % change over the last 2–3 sessions.
+
+How to generate the true “top 20” (recommended approach):
+1) Use the NASDAQ Stock Screener and export results:
+   https://www.nasdaq.com/market-activity/stocks/screener
+   - Filter: Exchange = NASDAQ
+   - Export the table (CSV) for the date of interest.
+2) For each ticker, pull daily close for the last 3 sessions (e.g., via Nasdaq historical data, Yahoo Finance, or a market-data API).
+3) Compute cumulative 3-session change:
+   %Change = (Close_today / Close_3_sessions_ago - 1) * 100
+4) Sort ascending (most negative) and take the top 20.
+
+If you want, tell me whether you want:
+- “last 2 sessions” or “last 3 sessions” exactly, and
+- whether OTC/ADRs are allowed,
+then I can provide a script (Python) to produce the exact top-20 list using a data provider you choose (e.g., Nasdaq export + yfinance, Alpha Vantage, Polygon, IEX Cloud).

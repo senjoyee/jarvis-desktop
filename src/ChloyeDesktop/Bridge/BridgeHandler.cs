@@ -14,6 +14,7 @@ public class BridgeHandler
     private readonly ChatService _chat;
     private readonly SecretsService _secrets;
     private readonly McpManager _mcp;
+    private readonly SkillService _skills;
     private CancellationTokenSource? _streamCts;
     
     // Callback to send streaming events to UI
@@ -26,7 +27,9 @@ public class BridgeHandler
         _conversations = services.GetRequiredService<ConversationService>();
         _chat = services.GetRequiredService<ChatService>();
         _secrets = services.GetRequiredService<SecretsService>();
+        _secrets = services.GetRequiredService<SecretsService>();
         _mcp = services.GetRequiredService<McpManager>();
+        _skills = services.GetRequiredService<SkillService>();
     }
 
     public async Task<string> HandleMessage(string messageJson)
@@ -175,8 +178,11 @@ public class BridgeHandler
         try
         {
             // Tool calling loop - continue until we get a final text response
-            const int maxToolCalls = 10; // Prevent infinite loops
+            const int maxToolCalls = 30; // Prevent infinite loops
             var toolCallCount = 0;
+
+            // Accumulate token usage across tool-call loop iterations
+            int usageInput = 0, usageOutput = 0, usageReasoning = 0, usageTotal = 0;
 
             while (toolCallCount < maxToolCalls)
             {
@@ -184,7 +190,18 @@ public class BridgeHandler
 
                 await foreach (var chunk in _chat.StreamCompletionAsync(request, _streamCts.Token))
                 {
-                    if (chunk.Done) break;
+                    if (chunk.Done)
+                    {
+                        // Accumulate usage from this iteration
+                        if (chunk.Usage != null)
+                        {
+                            usageInput += chunk.Usage.InputTokens;
+                            usageOutput += chunk.Usage.OutputTokens;
+                            usageReasoning += chunk.Usage.ReasoningTokens;
+                            usageTotal += chunk.Usage.TotalTokens;
+                        }
+                        break;
+                    }
                     
                     if (!string.IsNullOrEmpty(chunk.Content))
                     {
@@ -194,6 +211,16 @@ public class BridgeHandler
                         {
                             messageId = assistantMessage.Id.ToString(),
                             delta = chunk.Content
+                        });
+                    }
+                    
+                    // Send reasoning/thinking tokens to UI
+                    if (!string.IsNullOrEmpty(chunk.Reasoning))
+                    {
+                        SendStreamEvent("stream.reasoning", new
+                        {
+                            messageId = assistantMessage.Id.ToString(),
+                            delta = chunk.Reasoning
                         });
                     }
                     
@@ -210,7 +237,15 @@ public class BridgeHandler
                     toolCallCount++;
                     _logger.LogInformation("Executing tool call {Count}: {ToolName}", toolCallCount, pendingToolCall.Name);
 
-                    // Notify UI about tool call
+                    // Notify UI about tool call with details
+                    SendStreamEvent("stream.toolCallStart", new
+                    {
+                        messageId = assistantMessage.Id.ToString(),
+                        toolName = pendingToolCall.Name,
+                        arguments = pendingToolCall.Arguments
+                    });
+
+                    // Also send inline text for the stored message content
                     var toolCallText = $"\n\n🔧 *Calling tool: **{pendingToolCall.Name}***\n";
                     fullContent.Append(toolCallText);
                     SendStreamEvent("stream.delta", new
@@ -221,6 +256,7 @@ public class BridgeHandler
 
                     // Execute the tool via MCP
                     string toolResultText;
+                    bool toolSuccess = true;
                     try
                     {
                         var argsJson = JsonDocument.Parse(pendingToolCall.Arguments).RootElement;
@@ -234,9 +270,21 @@ public class BridgeHandler
                     {
                         _logger.LogError(ex, "Tool call failed: {ToolName}", pendingToolCall.Name);
                         toolResultText = $"Error: {ex.Message}";
+                        toolSuccess = false;
                     }
 
-                    // Add tool result notification to UI
+                    // Send detailed tool result to UI
+                    SendStreamEvent("stream.toolCallResult", new
+                    {
+                        messageId = assistantMessage.Id.ToString(),
+                        toolName = pendingToolCall.Name,
+                        result = toolResultText.Length > 2000 
+                            ? toolResultText.Substring(0, 2000) + "... (truncated)" 
+                            : toolResultText,
+                        success = toolSuccess
+                    });
+
+                    // Also send inline text for the stored message content
                     var resultNotice = $"\n*Tool result received*\n\n";
                     fullContent.Append(resultNotice);
                     SendStreamEvent("stream.delta", new
@@ -274,10 +322,17 @@ public class BridgeHandler
 
             _conversations.UpdateMessageContent(assistantMessage.Id, fullContent.ToString());
             
-            // Signal stream complete
+            // Signal stream complete with token usage
             SendStreamEvent("stream.done", new
             {
-                messageId = assistantMessage.Id.ToString()
+                messageId = assistantMessage.Id.ToString(),
+                usage = usageTotal > 0 ? new
+                {
+                    inputTokens = usageInput,
+                    outputTokens = usageOutput,
+                    reasoningTokens = usageReasoning,
+                    totalTokens = usageTotal
+                } : null
             });
         }
         catch (OperationCanceledException)
@@ -385,6 +440,25 @@ public class BridgeHandler
         else
         {
             sb.AppendLine("No tools are currently available. The user may need to connect MCP servers first.");
+        }
+
+        // Inject Skills
+        var skills = _skills.GetSkills();
+        if (skills.Count > 0)
+        {
+            sb.AppendLine();
+            sb.AppendLine("## Agent Skills");
+            sb.AppendLine("You are equipped with the following specialized skills. These allow you to perform complex tasks by following specific instructions.");
+            sb.AppendLine("To use a skill, you MUST first read its instruction file using the `view_file` tool on the provided path. Do NOT guess the instructions.");
+            sb.AppendLine();
+            sb.AppendLine("**Available Skills:**");
+            
+            foreach (var skill in skills)
+            {
+                sb.AppendLine($"- **{skill.Name}**: {skill.Description}");
+                sb.AppendLine($"  Path: `{skill.Path}`");
+            }
+            sb.AppendLine();
         }
         
         return sb.ToString();

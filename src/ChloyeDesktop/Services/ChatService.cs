@@ -62,7 +62,7 @@ public class ChatService
         // Add reasoning effort if specified
         if (!string.IsNullOrEmpty(request.ReasoningEffort) && request.ReasoningEffort != "none")
         {
-            bodyObj["reasoning"] = new { effort = request.ReasoningEffort };
+            bodyObj["reasoning"] = new { effort = request.ReasoningEffort, summary = "auto" };
         }
 
         // Add tools if available
@@ -81,13 +81,13 @@ public class ChatService
             DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
         };
 
+        _logger.LogInformation("Sending request to Responses API: model={Model}, reasoning_effort={Effort}, tools={ToolCount}", 
+            request.Model, request.ReasoningEffort ?? "none", request.Tools?.Count ?? 0);
+
         httpRequest.Content = new StringContent(
             JsonSerializer.Serialize(bodyObj, jsonOptions),
             Encoding.UTF8,
             "application/json");
-
-        _logger.LogInformation("Sending request to Responses API: model={Model}, reasoning_effort={Effort}, tools={ToolCount}", 
-            request.Model, request.ReasoningEffort ?? "none", request.Tools?.Count ?? 0);
 
         using var response = await _httpClient.SendAsync(
             httpRequest,
@@ -116,6 +116,7 @@ public class ChatService
             if (!line.StartsWith("data: ")) continue;
 
             var data = line[6..];
+            
             if (data == "[DONE]")
             {
                 yield return new StreamChunk { Done = true };
@@ -133,8 +134,27 @@ public class ChatService
                 continue;
             }
 
+            _logger.LogDebug("Stream event type: {Type}", parsed?.Type ?? "(null)");
+
             // Handle different event types from Responses API
-            if (parsed?.Type == "response.output_text.delta")
+            // Handle reasoning/thinking tokens - match all known variants
+            if (parsed?.Type != null && (
+                    parsed.Type.Contains("reasoning") && parsed.Type.Contains("delta")))
+            {
+                using var doc = JsonDocument.Parse(data);
+                string? reasoningText = null;
+                
+                if (doc.RootElement.TryGetProperty("delta", out var rd))
+                    reasoningText = rd.GetString();
+                else if (doc.RootElement.TryGetProperty("text", out var rt))
+                    reasoningText = rt.GetString();
+                
+                if (!string.IsNullOrEmpty(reasoningText))
+                {
+                    yield return new StreamChunk { Reasoning = reasoningText };
+                }
+            }
+            else if (parsed?.Type == "response.output_text.delta")
             {
                 // Extract delta from raw JSON using JsonDocument
                 using var doc = JsonDocument.Parse(data);
@@ -226,7 +246,34 @@ public class ChatService
             }
             else if (parsed?.Type == "response.completed" || parsed?.Type == "response.done")
             {
-                yield return new StreamChunk { Done = true };
+                // Extract token usage from the completed response
+                TokenUsage? usage = null;
+                try
+                {
+                    using var doc = JsonDocument.Parse(data);
+                    if (doc.RootElement.TryGetProperty("response", out var resp) &&
+                        resp.TryGetProperty("usage", out var usageEl))
+                    {
+                        usage = new TokenUsage();
+                        if (usageEl.TryGetProperty("input_tokens", out var inp))
+                            usage.InputTokens = inp.GetInt32();
+                        if (usageEl.TryGetProperty("output_tokens", out var outp))
+                            usage.OutputTokens = outp.GetInt32();
+                        if (usageEl.TryGetProperty("total_tokens", out var tot))
+                            usage.TotalTokens = tot.GetInt32();
+                        // Reasoning tokens are nested in output_tokens_details
+                        if (usageEl.TryGetProperty("output_tokens_details", out var details) &&
+                            details.TryGetProperty("reasoning_tokens", out var reas))
+                            usage.ReasoningTokens = reas.GetInt32();
+                        _logger.LogInformation("Token usage - input: {Input}, output: {Output}, reasoning: {Reasoning}",
+                            usage.InputTokens, usage.OutputTokens, usage.ReasoningTokens);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogDebug("Failed to parse usage from completed event: {Error}", ex.Message);
+                }
+                yield return new StreamChunk { Done = true, Usage = usage };
                 yield break;
             }
         }
@@ -283,6 +330,27 @@ public class StreamChunk
     /// Set when the model requests a tool call
     /// </summary>
     public ToolCallInfo? ToolCall { get; set; }
+    
+    /// <summary>
+    /// Reasoning/thinking text delta from the model
+    /// </summary>
+    public string? Reasoning { get; set; }
+    
+    /// <summary>
+    /// Token usage info from the completed response
+    /// </summary>
+    public TokenUsage? Usage { get; set; }
+}
+
+/// <summary>
+/// Token usage information from the API response
+/// </summary>
+public class TokenUsage
+{
+    public int InputTokens { get; set; }
+    public int OutputTokens { get; set; }
+    public int ReasoningTokens { get; set; }
+    public int TotalTokens { get; set; }
 }
 
 /// <summary>

@@ -1,6 +1,6 @@
-# Chloye Desktop Architecture
+# Jarvis Desktop Architecture
 
-This document outlines the high-level architecture of the Chloye Desktop application.
+This document outlines the high-level architecture of the Jarvis Desktop application.
 
 ## Architectural Overview
 

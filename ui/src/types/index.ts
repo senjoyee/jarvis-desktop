@@ -5,6 +5,21 @@ export interface Conversation {
   updatedAt: string
 }
 
+export interface ToolCallDetail {
+  toolName: string
+  arguments: string
+  result?: string
+  success?: boolean
+  status: 'calling' | 'done'
+}
+
+export interface TokenUsage {
+  inputTokens: number
+  outputTokens: number
+  reasoningTokens: number
+  totalTokens: number
+}
+
 export interface Message {
   id: string
   conversationId: string
@@ -13,6 +28,9 @@ export interface Message {
   model: string
   createdAt: string
   metadataJson?: string
+  reasoning?: string
+  toolCalls?: ToolCallDetail[]
+  tokenUsage?: TokenUsage
 }
 
 export interface McpServer {

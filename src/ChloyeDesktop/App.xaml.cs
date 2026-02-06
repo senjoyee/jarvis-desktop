@@ -19,6 +19,10 @@ public partial class App : Application
 
         var logger = Services.GetRequiredService<ILogger<App>>();
         logger.LogInformation("Chloye Desktop starting...");
+
+        // Auto-start MCP servers
+        var mcpManager = Services.GetRequiredService<McpManager>();
+        _ = mcpManager.InitializeAsync(); // Fire and forget
     }
 
     private void ConfigureServices(IServiceCollection services)
@@ -34,6 +38,7 @@ public partial class App : Application
         services.AddSingleton<ConversationService>();
         services.AddSingleton<ChatService>();
         services.AddSingleton<McpManager>();
+        services.AddSingleton<SkillService>();
     }
 
     protected override void OnExit(ExitEventArgs e)

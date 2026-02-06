@@ -1,8 +1,8 @@
 import { Outlet, useNavigate, useLocation } from 'react-router-dom'
 import { Button } from '@fluentui/react-components'
-import { 
-  ChatRegular, 
-  SettingsRegular, 
+import {
+  ChatRegular,
+  SettingsRegular,
   PlugConnectedRegular,
   AddRegular,
   DeleteRegular
@@ -13,7 +13,7 @@ import type { Conversation } from '../types'
 export default function Layout() {
   const navigate = useNavigate()
   const location = useLocation()
-  
+
   const conversations = useStore((state) => state.conversations)
   const currentConversationId = useStore((state) => state.currentConversationId)
   const createConversation = useStore((state) => state.createConversation)
@@ -42,9 +42,9 @@ export default function Layout() {
     <div className="app-layout">
       <aside className="sidebar">
         <div className="sidebar-header">
-          <span style={{ fontWeight: 600, fontSize: 16 }}>Chloye</span>
-          <Button 
-            icon={<AddRegular />} 
+          <span style={{ fontWeight: 600, fontSize: 16 }}>Jarvis</span>
+          <Button
+            icon={<AddRegular />}
             appearance="subtle"
             onClick={handleNewChat}
             title="New Chat"
@@ -55,7 +55,7 @@ export default function Layout() {
           <div className="sidebar-section">Conversations</div>
           <ul className="conversation-list">
             {conversations.map((conv) => (
-              <li 
+              <li
                 key={conv.id}
                 className={`conversation-item ${currentConversationId === conv.id ? 'active' : ''}`}
                 onClick={() => handleSelectConversation(conv)}
@@ -81,19 +81,19 @@ export default function Layout() {
           <div className="sidebar-section" style={{ marginTop: 24 }}>
             <span>MCP Servers</span>
             {connectedServers > 0 && (
-              <span style={{ 
-                marginLeft: 8, 
-                fontSize: 10, 
-                padding: '2px 6px', 
-                background: '#28a745', 
-                borderRadius: 4 
+              <span style={{
+                marginLeft: 8,
+                fontSize: 10,
+                padding: '2px 6px',
+                background: '#28a745',
+                borderRadius: 4
               }}>
                 {connectedServers} connected
               </span>
             )}
           </div>
           <ul className="conversation-list">
-            <li 
+            <li
               className={`conversation-item ${location.pathname === '/mcp' ? 'active' : ''}`}
               onClick={() => navigate('/mcp')}
             >
@@ -103,8 +103,8 @@ export default function Layout() {
           </ul>
         </div>
 
-        <div style={{ 
-          padding: 16, 
+        <div style={{
+          padding: 16,
           borderTop: '1px solid #3c3c3c',
           marginTop: 'auto'
         }}>

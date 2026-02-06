@@ -1,4 +1,4 @@
-# Windows Desktop Chat + MCP Client (Megaplan)
+# Windows Desktop Chat + MCP Client (Jarvis)
 
 Build a Windows-first desktop chat client (Claude/ChatGPT-style) using a WPF shell hosting a React UI via WebView2, with streaming OpenAI chat (GPT-5.2), per-message model selection, conversation history, and the ability to add/manage local+remote MCP servers (connect/list tools/manual tool test).
 
