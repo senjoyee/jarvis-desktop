@@ -1,8 +1,6 @@
 import { useState, useEffect } from 'react'
-import { Button, Spinner, Textarea } from '@fluentui/react-components'
-import { 
-  PlayRegular, 
-  StopRegular, 
+import { Button, Spinner, Textarea, Switch } from '@fluentui/react-components'
+import {
   ArrowSyncRegular,
   FolderOpenRegular
 } from '@fluentui/react-icons'
@@ -91,10 +89,10 @@ export default function McpPage() {
               Edit the config file to add or remove MCP servers. After saving, click Reload to apply changes.
             </p>
             <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
-              <code style={{ 
-                flex: 1, 
-                padding: '8px 12px', 
-                background: '#1e1e1e', 
+              <code style={{
+                flex: 1,
+                padding: '8px 12px',
+                background: '#1e1e1e',
                 borderRadius: 4,
                 fontSize: 12,
                 color: '#888'
@@ -103,16 +101,16 @@ export default function McpPage() {
               </code>
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
-              <Button 
+              <Button
                 icon={<FolderOpenRegular />}
-                appearance="primary" 
+                appearance="primary"
                 onClick={handleOpenConfig}
               >
                 Open Config File
               </Button>
-              <Button 
+              <Button
                 icon={<ArrowSyncRegular />}
-                appearance="secondary" 
+                appearance="secondary"
                 onClick={() => loadMcpServers()}
               >
                 Reload
@@ -125,43 +123,44 @@ export default function McpPage() {
             <p style={{ color: '#888' }}>No servers configured. Click "Open Config File" to add servers.</p>
           ) : (
             mcpServers.map((server) => (
-              <div 
-                key={server.id} 
+              <div
+                key={server.id}
                 className={`server-card ${selectedServer?.id === server.id ? 'active' : ''}`}
                 onClick={() => setSelectedServer(server)}
-                style={{ cursor: 'pointer' }}
+                style={{
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '12px 16px',
+                  gap: 12
+                }}
               >
-                <div className="server-header">
-                  <span className="server-name">{server.name}</span>
-                  <span className={`server-status ${server.status}`}>
-                    {server.status}
-                  </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, overflow: 'hidden' }}>
+                  <div style={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: '50%',
+                    background: server.status === 'connected' ? '#28a745' :
+                      server.status === 'connecting' ? '#ffc107' :
+                        server.status === 'error' ? '#dc3545' : '#666',
+                    flexShrink: 0
+                  }} />
+                  <span className="server-name" style={{ fontWeight: 600 }}>{server.name}</span>
                 </div>
-                <div className="server-info">
-                  {server.type === 'local' ? (
-                    <span>Local: {server.command}</span>
-                  ) : (
-                    <span>Remote: {server.url}</span>
-                  )}
-                </div>
-                <div className="server-actions">
-                  {server.status === 'stopped' || server.status === 'error' ? (
-                    <Button 
-                      icon={<PlayRegular />} 
-                      size="small"
-                      onClick={(e) => { e.stopPropagation(); handleStart(server); }}
-                    >
-                      Start
-                    </Button>
-                  ) : (
-                    <Button 
-                      icon={<StopRegular />} 
-                      size="small"
-                      onClick={(e) => { e.stopPropagation(); handleStop(server); }}
-                    >
-                      Stop
-                    </Button>
-                  )}
+
+                <div onClick={(e) => e.stopPropagation()}>
+                  <Switch
+                    checked={server.status === 'connected' || server.status === 'connecting'}
+                    onChange={(_, data) => {
+                      if (data.checked) {
+                        handleStart(server)
+                      } else {
+                        handleStop(server)
+                      }
+                    }}
+                    disabled={server.status === 'connecting'}
+                  />
                 </div>
               </div>
             ))
@@ -170,7 +169,7 @@ export default function McpPage() {
 
         {selectedServer && (
           <div style={{ flex: 1, maxWidth: 500 }}>
-            <ServerDetails 
+            <ServerDetails
               server={selectedServer}
               tools={serverTools}
               logs={serverLogs}
@@ -184,13 +183,13 @@ export default function McpPage() {
   )
 }
 
-function ServerDetails({ 
-  server, 
-  tools, 
-  logs, 
+function ServerDetails({
+  server,
+  tools,
+  logs,
   isLoading,
-  onRefresh 
-}: { 
+  onRefresh
+}: {
   server: McpServer
   tools: McpTool[]
   logs: string[]
@@ -204,13 +203,31 @@ function ServerDetails({
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <h3>{server.name} Details</h3>
-        <Button 
-          icon={<ArrowSyncRegular />} 
-          appearance="subtle" 
+        <Button
+          icon={<ArrowSyncRegular />}
+          appearance="subtle"
           size="small"
           onClick={onRefresh}
           disabled={server.status !== 'connected'}
         />
+      </div>
+
+      <div style={{ marginBottom: 20 }}>
+        <div style={{
+          fontSize: 12,
+          color: '#888',
+          fontFamily: 'monospace',
+          background: '#1e1e1e',
+          padding: '8px 12px',
+          borderRadius: 4,
+          wordBreak: 'break-all'
+        }}>
+          {server.type === 'local' ? (
+            <span>Command: {server.command}</span>
+          ) : (
+            <span>URL: {server.url}</span>
+          )}
+        </div>
       </div>
 
       {server.status !== 'connected' ? (
@@ -225,8 +242,8 @@ function ServerDetails({
               <p style={{ color: '#888', fontSize: 13 }}>No tools available</p>
             ) : (
               tools.map((tool) => (
-                <div 
-                  key={tool.name} 
+                <div
+                  key={tool.name}
                   className="tool-item"
                   onClick={() => {
                     setSelectedTool(tool)
@@ -272,14 +289,14 @@ function ServerDetails({
   )
 }
 
-function ToolRunnerModal({ 
-  serverId, 
-  tool, 
-  onClose 
-}: { 
+function ToolRunnerModal({
+  serverId,
+  tool,
+  onClose
+}: {
   serverId: string
   tool: McpTool
-  onClose: () => void 
+  onClose: () => void
 }) {
   const [argsJson, setArgsJson] = useState('{}')
   const [result, setResult] = useState<string | null>(null)
@@ -307,7 +324,7 @@ function ToolRunnerModal({
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()} style={{ width: 600 }}>
         <h2>Run Tool: {tool.name}</h2>
-        
+
         {tool.description && (
           <p style={{ color: '#888', marginBottom: 16 }}>{tool.description}</p>
         )}
@@ -324,10 +341,10 @@ function ToolRunnerModal({
         {tool.inputSchema && (
           <details style={{ marginBottom: 16 }}>
             <summary style={{ cursor: 'pointer', color: '#888' }}>Input Schema</summary>
-            <pre style={{ 
-              background: '#1e1e1e', 
-              padding: 12, 
-              borderRadius: 4, 
+            <pre style={{
+              background: '#1e1e1e',
+              padding: 12,
+              borderRadius: 4,
               fontSize: 12,
               overflow: 'auto',
               maxHeight: 200
@@ -337,8 +354,8 @@ function ToolRunnerModal({
           </details>
         )}
 
-        <Button 
-          appearance="primary" 
+        <Button
+          appearance="primary"
           onClick={handleRun}
           disabled={isRunning}
           style={{ marginBottom: 16 }}
@@ -347,10 +364,10 @@ function ToolRunnerModal({
         </Button>
 
         {error && (
-          <div style={{ 
-            padding: 12, 
-            background: '#5c1e1e', 
-            borderRadius: 4, 
+          <div style={{
+            padding: 12,
+            background: '#5c1e1e',
+            borderRadius: 4,
             marginBottom: 16,
             color: '#ff8080'
           }}>
@@ -361,10 +378,10 @@ function ToolRunnerModal({
         {result && (
           <div>
             <label style={{ display: 'block', marginBottom: 8, color: '#888' }}>Result</label>
-            <pre style={{ 
-              background: '#1e1e1e', 
-              padding: 12, 
-              borderRadius: 4, 
+            <pre style={{
+              background: '#1e1e1e',
+              padding: 12,
+              borderRadius: 4,
               fontSize: 12,
               overflow: 'auto',
               maxHeight: 300
