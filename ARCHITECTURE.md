@@ -8,23 +8,31 @@ The application is a **Windows Desktop Host** built with .NET 8 and WPF, which e
 
 ```mermaid
 graph TD
-    subgraph Host [Windows Desktop Host .NET 8 WPF]
-        style Host fill:#2d3436,stroke:#6c5ce7,stroke-width:4px,color:white
+    subgraph Host [Jarvis Desktop Host .NET 8 WPF]
+        style Host fill:#ffffff,stroke:#2c3e50,stroke-width:2px,color:#2c3e50
         
         subgraph UI_Container [WebView2 Container]
-            style UI_Container fill:#00b894,stroke:none,color:black
+            style UI_Container fill:#f8f9fa,stroke:#bdc3c7,stroke-dasharray: 5 5,color:#2c3e50
             ReactApp[React UI<br/>(TypeScript + Vite + Fluent UI)]
+            style ReactApp fill:#e8f8f5,stroke:#1abc9c,stroke-width:2px,color:#2c3e50
         end
 
         Bridge[Inter-Process Communication Bridge<br/>(RPC API)]
-        style Bridge fill:#fdcb6e,stroke:none,color:black
+        style Bridge fill:#fef9e7,stroke:#f1c40f,stroke-width:2px,color:#2c3e50
 
         subgraph Backend [Backend Services Layer]
-            style Backend fill:#0984e3,stroke:none,color:white
+            style Backend fill:#f4f6f7,stroke:#bdc3c7,color:#2c3e50
             ChatSvc[Chat Service<br/>(Streaming)]
+            style ChatSvc fill:#ebf5fb,stroke:#3498db,stroke-width:2px,color:#2c3e50
+            
             McpMgr[MCP Manager<br/>(Client & Registry)]
+            style McpMgr fill:#ebf5fb,stroke:#3498db,stroke-width:2px,color:#2c3e50
+            
             ConvSvc[Conversation Service<br/>(History Logic)]
+            style ConvSvc fill:#ebf5fb,stroke:#3498db,stroke-width:2px,color:#2c3e50
+            
             SecSvc[Secrets Service<br/>(Security)]
+            style SecSvc fill:#ebf5fb,stroke:#3498db,stroke-width:2px,color:#2c3e50
         end
     end
 
@@ -37,16 +45,16 @@ graph TD
 
     %% External Connections
     ChatSvc <-->|HTTPS| OpenAI[OpenAI API<br/>(LLM Provider)]
-    style OpenAI fill:#000000,stroke:#white,stroke-width:2px,color:white
+    style OpenAI fill:#ffffff,stroke:#2c3e50,stroke-width:2px,color:#2c3e50
 
     McpMgr <-->|Stdio / SSE| ExtMCP[External MCP Servers<br/>(Local & Remote)]
-    style ExtMCP fill:#d63031,stroke:none,color:white
+    style ExtMCP fill:#fadbd8,stroke:#e74c3c,stroke-width:2px,color:#2c3e50
 
     ConvSvc <-->|SQL| SQLite[(SQLite Database<br/>%LOCALAPPDATA%)]
-    style SQLite fill:#636e72,stroke:none,color:white
+    style SQLite fill:#eaeded,stroke:#95a5a6,stroke-width:2px,color:#2c3e50
 
     SecSvc <-->|Win32 API| CredMan[Windows Credential Manager]
-    style CredMan fill:#636e72,stroke:none,color:white
+    style CredMan fill:#eaeded,stroke:#95a5a6,stroke-width:2px,color:#2c3e50
 ```
 
 ## Component Details
@@ -69,5 +77,5 @@ graph TD
 *   **SecretsService**: Provides a secure interface to the Windows Credential Manager for storing API keys.
 
 ### 4. Persistence & Security
-*   **SQLite**: A local `chloye.db` file stores conversation history and non-sensitive configuration.
+*   **SQLite**: A local `jarvis.db` file stores conversation history and non-sensitive configuration.
 *   **Windows Credential Manager**: Securely stores sensitive data like OpenAI API keys and MCP authentication tokens.

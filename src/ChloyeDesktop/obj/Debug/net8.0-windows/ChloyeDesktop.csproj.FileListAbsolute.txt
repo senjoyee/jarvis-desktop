@@ -65,5 +65,5 @@ C:\GenAI\Chloye_desktop\src\ChloyeDesktop\obj\Debug\net8.0-windows\ChloyeDesktop
 C:\GenAI\Chloye_desktop\src\ChloyeDesktop\obj\Debug\net8.0-windows\ChloyeDesktop.genruntimeconfig.cache
 C:\GenAI\Chloye_desktop\src\ChloyeDesktop\obj\Debug\net8.0-windows\ref\ChloyeDesktop.dll
 C:\GenAI\Chloye_desktop\src\ChloyeDesktop\bin\Debug\net8.0-windows\wwwroot\index.html
-C:\GenAI\Chloye_desktop\src\ChloyeDesktop\bin\Debug\net8.0-windows\wwwroot\assets\index-DKc8r0MA.js
 C:\GenAI\Chloye_desktop\src\ChloyeDesktop\bin\Debug\net8.0-windows\wwwroot\assets\index-DPEFtVRt.css
+C:\GenAI\Chloye_desktop\src\ChloyeDesktop\bin\Debug\net8.0-windows\wwwroot\assets\index-Bew0JXGP.js

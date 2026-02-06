@@ -62,19 +62,19 @@ export default function SettingsPage() {
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <Button 
-                appearance="primary" 
+              <Button
+                appearance="primary"
                 onClick={handleTestConnection}
                 disabled={isTesting}
               >
                 {isTesting ? <Spinner size="tiny" /> : 'Test Connection'}
               </Button>
               {testResult !== null && (
-                <span style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
+                <span style={{
+                  display: 'flex',
+                  alignItems: 'center',
                   gap: 4,
-                  color: testResult ? '#28a745' : '#dc3545' 
+                  color: testResult ? '#28a745' : '#dc3545'
                 }}>
                   {testResult ? (
                     <>
@@ -101,8 +101,8 @@ export default function SettingsPage() {
                 style={{ width: '100%', maxWidth: 400 }}
               />
             </div>
-            <Button 
-              appearance="primary" 
+            <Button
+              appearance="primary"
               onClick={handleSaveKey}
               disabled={!apiKey.trim()}
             >
@@ -117,11 +117,11 @@ export default function SettingsPage() {
         <p style={{ color: '#888', fontSize: 14 }}>
           Conversations and settings are stored locally in:
         </p>
-        <code style={{ 
-          display: 'block', 
-          marginTop: 8, 
-          padding: 12, 
-          background: '#1e1e1e', 
+        <code style={{
+          display: 'block',
+          marginTop: 8,
+          padding: 12,
+          background: '#1e1e1e',
           borderRadius: 4,
           fontSize: 13
         }}>
@@ -132,7 +132,7 @@ export default function SettingsPage() {
       <div className="settings-section">
         <h3>About</h3>
         <p style={{ color: '#888', fontSize: 14 }}>
-          Chloye Desktop v1.0.0
+          Jarvis Desktop v1.0.0
         </p>
         <p style={{ color: '#888', fontSize: 14, marginTop: 8 }}>
           A Windows desktop chat client with MCP support.

@@ -341,7 +341,7 @@ public class McpManager
             throw new InvalidOperationException("Server not connected");
         }
 
-        return await conn.ListToolsAsync();
+        return await conn.ListToolsAsync().ConfigureAwait(false);
     }
 
     public async Task<JsonElement> CallToolAsync(Guid serverId, string toolName, JsonElement args)
@@ -351,7 +351,7 @@ public class McpManager
             throw new InvalidOperationException("Server not connected");
         }
 
-        return await conn.CallToolAsync(toolName, args);
+        return await conn.CallToolAsync(toolName, args).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -372,7 +372,7 @@ public class McpManager
                 var serverConfig = ListServers().FirstOrDefault(s => s.Id == serverId);
                 var serverName = serverConfig?.Name ?? serverId.ToString();
                 
-                var tools = await conn.ListToolsAsync();
+                var tools = await conn.ListToolsAsync().ConfigureAwait(false);
                 foreach (var tool in tools)
                 {
                     result.Add(new McpToolWithServer
@@ -399,7 +399,7 @@ public class McpManager
     public async Task<JsonElement> CallToolByNameAsync(string toolName, JsonElement args)
     {
         // Find which server has this tool
-        var allTools = await GetAllToolsAsync();
+        var allTools = await GetAllToolsAsync().ConfigureAwait(false);
         var toolWithServer = allTools.FirstOrDefault(t => t.Tool.Name == toolName);
         
         if (toolWithServer == null)
@@ -407,7 +407,7 @@ public class McpManager
             throw new InvalidOperationException($"Tool not found: {toolName}");
         }
 
-        return await CallToolAsync(toolWithServer.ServerId, toolName, args);
+        return await CallToolAsync(toolWithServer.ServerId, toolName, args).ConfigureAwait(false);
     }
 
     #endregion
@@ -553,7 +553,7 @@ public class McpLocalConnection : McpConnection
         _process.BeginErrorReadLine();
         AddLog("Waiting for output...");
 
-        await InitializeAsync();
+        await InitializeAsync().ConfigureAwait(false);
         Status = McpConnectionStatus.Connected;
         AddLog("Connected");
     }
@@ -569,7 +569,7 @@ public class McpLocalConnection : McpConnection
         });
 
         AddLog("Received initialize response");
-        await SendNotificationAsync("notifications/initialized", new { });
+        await SendNotificationAsync("notifications/initialized", new { }).ConfigureAwait(false);
     }
 
     private void HandleOutput(string line)
@@ -626,11 +626,11 @@ public class McpLocalConnection : McpConnection
         };
 
         var json = JsonSerializer.Serialize(request);
-        await _writeLock.WaitAsync();
+        await _writeLock.WaitAsync().ConfigureAwait(false);
         try
         {
-            await _process!.StandardInput.WriteLineAsync(json);
-            await _process.StandardInput.FlushAsync();
+            await _process!.StandardInput.WriteLineAsync(json).ConfigureAwait(false);
+            await _process.StandardInput.FlushAsync().ConfigureAwait(false);
         }
         finally
         {
@@ -640,7 +640,7 @@ public class McpLocalConnection : McpConnection
         var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
         cts.Token.Register(() => tcs.TrySetCanceled());
 
-        return await tcs.Task;
+        return await tcs.Task.ConfigureAwait(false);
     }
 
     private async Task SendNotificationAsync(string method, object? parameters)
@@ -653,11 +653,11 @@ public class McpLocalConnection : McpConnection
         };
 
         var json = JsonSerializer.Serialize(notification);
-        await _writeLock.WaitAsync();
+        await _writeLock.WaitAsync().ConfigureAwait(false);
         try
         {
-            await _process!.StandardInput.WriteLineAsync(json);
-            await _process.StandardInput.FlushAsync();
+            await _process!.StandardInput.WriteLineAsync(json).ConfigureAwait(false);
+            await _process.StandardInput.FlushAsync().ConfigureAwait(false);
         }
         finally
         {
@@ -667,7 +667,7 @@ public class McpLocalConnection : McpConnection
 
     public override async Task<List<McpTool>> ListToolsAsync()
     {
-        var result = await SendRequestAsync("tools/list", new { });
+        var result = await SendRequestAsync("tools/list", new { }).ConfigureAwait(false);
         var tools = result.GetProperty("tools").Deserialize<List<McpTool>>();
         return tools ?? new List<McpTool>();
     }
@@ -679,7 +679,7 @@ public class McpLocalConnection : McpConnection
         {
             name = toolName,
             arguments = args
-        });
+        }).ConfigureAwait(false);
         return result;
     }
 

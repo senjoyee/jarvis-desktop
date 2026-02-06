@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jarvis Desktop Architecture</title>
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+        mermaid.initialize({ startOnLoad: true });
+    </script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #f0f2f5;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            max-width: 1000px;
+            width: 100%;
+            text-align: center;
+        }
+
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 30px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>Jarvis Desktop Architecture</h1>
+        <div class="mermaid">
+            graph TD
+            subgraph Host ["Jarvis Desktop Host .NET 8 WPF"]
+            style Host fill:#ffffff,stroke:#2c3e50,stroke-width:2px,color:#2c3e50
+
+            subgraph UI_Container ["WebView2 Container"]
+            style UI_Container fill:#f8f9fa,stroke:#bdc3c7,stroke-dasharray: 5 5,color:#2c3e50
+            ReactApp["React UI<br />(TypeScript + Vite + Fluent UI)"]
+            style ReactApp fill:#e8f8f5,stroke:#1abc9c,stroke-width:2px,color:#2c3e50
+            end
+
+            Bridge["Inter-Process Communication Bridge<br />(RPC API)"]
+            style Bridge fill:#fef9e7,stroke:#f1c40f,stroke-width:2px,color:#2c3e50
+
+            subgraph Backend ["Backend Services Layer"]
+            style Backend fill:#f4f6f7,stroke:#bdc3c7,color:#2c3e50
+            ChatSvc["Chat Service<br />(Streaming)"]
+            style ChatSvc fill:#ebf5fb,stroke:#3498db,stroke-width:2px,color:#2c3e50
+
+            McpMgr["MCP Manager<br />(Client & Registry)"]
+            style McpMgr fill:#ebf5fb,stroke:#3498db,stroke-width:2px,color:#2c3e50
+
+            ConvSvc["Conversation Service<br />(History Logic)"]
+            style ConvSvc fill:#ebf5fb,stroke:#3498db,stroke-width:2px,color:#2c3e50
+
+            SecSvc["Secrets Service<br />(Security)"]
+            style SecSvc fill:#ebf5fb,stroke:#3498db,stroke-width:2px,color:#2c3e50
+            end
+            end
+
+            %% Connections within Host
+            ReactApp <-->|JSON-RPC| Bridge
+                Bridge <--> ChatSvc
+                    Bridge <--> McpMgr
+                        Bridge <--> ConvSvc
+                            Bridge <--> SecSvc
+
+                                %% External Connections
+                                ChatSvc <-->|HTTPS| OpenAI["OpenAI API<br />(LLM Provider)"]
+                                    style OpenAI fill:#ffffff,stroke:#2c3e50,stroke-width:2px,color:#2c3e50
+
+                                    McpMgr <-->|Stdio / SSE| ExtMCP["External MCP Servers<br />(Local & Remote)"]
+                                        style ExtMCP fill:#fadbd8,stroke:#e74c3c,stroke-width:2px,color:#2c3e50
+
+                                        ConvSvc <-->|"SQL"| SQLite[("SQLite Database<br />%LOCALAPPDATA%")]
+                                            style SQLite fill:#eaeded,stroke:#95a5a6,stroke-width:2px,color:#2c3e50
+
+                                            SecSvc <-->|"Win32 API"| CredMan["Windows Credential Manager"]
+                                                style CredMan fill:#eaeded,stroke:#95a5a6,stroke-width:2px,color:#2c3e50
+        </div>
+    </div>
+</body>
+
+</html>

@@ -92,16 +92,16 @@ public class ChatService
         using var response = await _httpClient.SendAsync(
             httpRequest,
             HttpCompletionOption.ResponseHeadersRead,
-            cancellationToken);
+            cancellationToken).ConfigureAwait(false);
 
         if (!response.IsSuccessStatusCode)
         {
-            var error = await response.Content.ReadAsStringAsync(cancellationToken);
+            var error = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
             _logger.LogError("OpenAI Responses API error: {StatusCode} - {Error}", response.StatusCode, error);
             throw new HttpRequestException($"OpenAI API error: {response.StatusCode} - {error}");
         }
 
-        using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+        using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
         using var reader = new StreamReader(stream);
 
         // Track function call state for aggregation
@@ -111,7 +111,7 @@ public class ChatService
 
         while (!reader.EndOfStream && !cancellationToken.IsCancellationRequested)
         {
-            var line = await reader.ReadLineAsync(cancellationToken);
+            var line = await reader.ReadLineAsync(cancellationToken).ConfigureAwait(false);
             if (string.IsNullOrEmpty(line)) continue;
             if (!line.StartsWith("data: ")) continue;
 
@@ -292,7 +292,7 @@ public class ChatService
             var request = new HttpRequestMessage(HttpMethod.Get, "https://api.openai.com/v1/models");
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
 
-            var response = await _httpClient.SendAsync(request);
+            var response = await _httpClient.SendAsync(request).ConfigureAwait(false);
             return response.IsSuccessStatusCode;
         }
         catch (Exception ex)

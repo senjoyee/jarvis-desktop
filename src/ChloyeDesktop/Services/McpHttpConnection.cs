@@ -36,12 +36,12 @@ public class McpHttpConnection : McpConnection
                 protocolVersion = "2024-11-05",
                 capabilities = new { },
                 clientInfo = new { name = "ChloyeDesktop", version = "1.0.0" }
-            });
+            }).ConfigureAwait(false);
 
             // Send initialized notification
             try
             {
-                await SendRpcAsync("notifications/initialized", new { });
+                await SendRpcAsync("notifications/initialized", new { }).ConfigureAwait(false);
             }
             catch (Exception)
             {
@@ -64,7 +64,7 @@ public class McpHttpConnection : McpConnection
     {
         try 
         {
-            var result = await SendRpcAsync("tools/list", new { });
+            var result = await SendRpcAsync("tools/list", new { }).ConfigureAwait(false);
             if (result.ValueKind != JsonValueKind.Undefined && result.TryGetProperty("tools", out var toolsArray))
             {
                 var tools = JsonSerializer.Deserialize<List<McpTool>>(toolsArray.GetRawText(), 
@@ -85,7 +85,7 @@ public class McpHttpConnection : McpConnection
         { 
             name = toolName, 
             arguments = args 
-        });
+        }).ConfigureAwait(false);
         
         // MCP tool call result wrapper? 
         // Spec says result is { content: [...] }
@@ -122,11 +122,11 @@ public class McpHttpConnection : McpConnection
             request.Headers.Add("mcp-session-id", _sessionId);
         }
 
-        using var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
+        using var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead).ConfigureAwait(false);
         
         if (!response.IsSuccessStatusCode)
         {
-             var errorContent = await response.Content.ReadAsStringAsync();
+             var errorContent = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
              AddLog($"HTTP Error {response.StatusCode}: {errorContent}");
         }
 
@@ -158,7 +158,7 @@ public class McpHttpConnection : McpConnection
         if (mediaType != null && mediaType.Contains("application/json"))
         {
             // Direct JSON response
-            var json = await response.Content.ReadAsStringAsync();
+            var json = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
             AddLog($"[Debug] JSON Body: {json}");
             
             using var doc = JsonDocument.Parse(json);
@@ -175,7 +175,7 @@ public class McpHttpConnection : McpConnection
         }
 
         // SSE Response
-        using var stream = await response.Content.ReadAsStreamAsync();
+        using var stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
         using var reader = new StreamReader(stream);
 
         // AddLog("[Debug] Parsing SSE...");
@@ -185,7 +185,7 @@ public class McpHttpConnection : McpConnection
 
         while (!reader.EndOfStream)
         {
-            var line = await reader.ReadLineAsync();
+            var line = await reader.ReadLineAsync().ConfigureAwait(false);
             if (string.IsNullOrEmpty(line)) continue;
 
             if (!line.StartsWith("event:"))
@@ -196,7 +196,7 @@ public class McpHttpConnection : McpConnection
             if (line.StartsWith("event:"))
             {
                 var eventType = line[6..].Trim();
-                var dataLine = await reader.ReadLineAsync();
+                var dataLine = await reader.ReadLineAsync().ConfigureAwait(false);
                 
                 if (dataLine?.StartsWith("data:") == true)
                 {

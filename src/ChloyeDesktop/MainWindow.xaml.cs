@@ -111,7 +111,8 @@ public partial class MainWindow : Window
             }
             _logger.LogDebug("Received message: {Message}", message);
 
-            var response = await _bridgeHandler.HandleMessage(message);
+            // Offload to background thread to prevent UI blocking during long operations
+            var response = await Task.Run(() => _bridgeHandler.HandleMessage(message));
             
             await webView.Dispatcher.InvokeAsync(() =>
             {

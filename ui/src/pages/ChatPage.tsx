@@ -79,7 +79,7 @@ export default function ChatPage() {
     return (
       <div className="chat-container">
         <div className="empty-state">
-          <h2>Welcome to Chloye</h2>
+          <h2>Welcome to Jarvis</h2>
           <p>Start a new conversation or select one from the sidebar.</p>
           {!hasApiKey && (
             <p style={{ marginTop: 16, color: '#ffc107' }}>
