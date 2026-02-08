@@ -253,7 +253,7 @@ public class ChatService
 
 public class ChatRequest
 {
-    public string Model { get; set; } = "openai/gpt-4o-mini";
+    public string Model { get; set; } = "openai/gpt-5-mini";
     public string? ReasoningEffort { get; set; } = "medium";
     public List<ChatMessage> Messages { get; set; } = new();
     
