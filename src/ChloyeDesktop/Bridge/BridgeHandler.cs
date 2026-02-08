@@ -120,10 +120,7 @@ public class BridgeHandler
     {
         var conversationId = Guid.Parse(parameters?.GetProperty("conversationId").GetString()!);
         var content = parameters?.GetProperty("content").GetString()!;
-        var model = parameters?.GetProperty("model").GetString() ?? "gpt-5.2";
-        var reasoningEffort = parameters?.TryGetProperty("reasoningEffort", out var effortProp) == true 
-            ? effortProp.GetString() ?? "medium" 
-            : "medium";
+        var model = parameters?.GetProperty("model").GetString() ?? "openai/gpt-4o-mini";
 
         // Save user message
         var userMessage = _conversations.AddMessage(conversationId, "user", content, model);
@@ -164,7 +161,6 @@ public class BridgeHandler
         var request = new ChatRequest
         {
             Model = model,
-            ReasoningEffort = reasoningEffort,
             Messages = messagesWithSystem,
             Tools = openAiTools.Count > 0 ? openAiTools : null
         };
@@ -305,7 +301,6 @@ public class BridgeHandler
                     request = new ChatRequest
                     {
                         Model = model,
-                        ReasoningEffort = reasoningEffort,
                         Messages = chatMessages,
                         Tools = openAiTools.Count > 0 ? openAiTools : null
                     };

@@ -9,18 +9,10 @@ import { useStore } from '../store'
 import StreamingText from '../components/StreamingText'
 import type { ToolCallDetail, TokenUsage } from '../types'
 
-const REASONING_EFFORT_LEVELS = [
-  { value: 'none', label: 'None (Fastest)' },
-  { value: 'low', label: 'Low' },
-  { value: 'medium', label: 'Medium' },
-  { value: 'high', label: 'High (Most Thorough)' },
-]
-
 export default function ChatPage() {
   const { conversationId } = useParams()
   const [input, setInput] = useState('')
-  const [selectedModel, setSelectedModel] = useState('openai/gpt-5.2')
-  const [reasoningEffort, setReasoningEffort] = useState('none')
+  const [selectedModel, setSelectedModel] = useState('openai/gpt-4o-mini')
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
@@ -48,13 +40,6 @@ export default function ChatPage() {
     return grouped
   }, [availableModels])
 
-  // Check if selected model supports reasoning
-  const selectedModelDef = useMemo(() => {
-    return availableModels.find(m => m.id === selectedModel)
-  }, [availableModels, selectedModel])
-
-  const supportsReasoning = selectedModelDef?.supportsReasoning ?? false
-
   useEffect(() => {
     checkApiKey()
     loadModels()
@@ -70,19 +55,12 @@ export default function ChatPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-  // Reset reasoning effort when switching to a non-reasoning model
-  useEffect(() => {
-    if (!supportsReasoning && reasoningEffort !== 'none') {
-      setReasoningEffort('none')
-    }
-  }, [supportsReasoning, reasoningEffort])
-
   const handleSend = async () => {
     if (!input.trim() || isStreaming) return
 
     const content = input.trim()
     setInput('')
-    await sendMessage(content, selectedModel, reasoningEffort)
+    await sendMessage(content, selectedModel)
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -132,25 +110,11 @@ export default function ChatPage() {
                     {models.map((model) => (
                       <option key={model.id} value={model.id}>
                         {model.name}
-                        {model.supportsReasoning ? ' 🧠' : ''}
                       </option>
                     ))}
                   </optgroup>
                 ))}
               </Select>
-              {supportsReasoning && (
-                <Select
-                  value={reasoningEffort}
-                  onChange={(_, data) => setReasoningEffort(data.value)}
-                  size="small"
-                >
-                  {REASONING_EFFORT_LEVELS.map((level) => (
-                    <option key={level.value} value={level.value}>
-                      Reasoning: {level.label}
-                    </option>
-                  ))}
-                </Select>
-              )}
             </div>
             <div className="composer-row">
               <div className="composer-input">
@@ -257,25 +221,11 @@ export default function ChatPage() {
                   {models.map((model) => (
                     <option key={model.id} value={model.id}>
                       {model.name}
-                      {model.supportsReasoning ? ' 🧠' : ''}
                     </option>
                   ))}
                 </optgroup>
               ))}
             </Select>
-            {supportsReasoning && (
-              <Select
-                value={reasoningEffort}
-                onChange={(_, data) => setReasoningEffort(data.value)}
-                size="small"
-              >
-                {REASONING_EFFORT_LEVELS.map((level) => (
-                  <option key={level.value} value={level.value}>
-                    Reasoning: {level.label}
-                  </option>
-                ))}
-              </Select>
-            )}
           </div>
           <div className="composer-row">
             <div className="composer-input">

@@ -31,7 +31,7 @@ interface AppState {
   selectConversation: (id: string | null) => Promise<void>
 
   loadMessages: (conversationId: string) => Promise<void>
-  sendMessage: (content: string, model: string, reasoningEffort: string) => Promise<void>
+  sendMessage: (content: string, model: string) => Promise<void>
   stopStream: () => Promise<void>
 
   // Streaming handlers
@@ -136,7 +136,7 @@ export const useStore = create<AppState>((set, get) => ({
     }
   },
 
-  sendMessage: async (content, model, reasoningEffort) => {
+  sendMessage: async (content, model) => {
     let { currentConversationId } = get()
 
     if (!currentConversationId) {
@@ -172,7 +172,7 @@ export const useStore = create<AppState>((set, get) => ({
     try {
       const result = await invoke<{ userMessage: Message; assistantMessage: Message }>(
         'messages.send',
-        { conversationId: currentConversationId, content, model, reasoningEffort }
+        { conversationId: currentConversationId, content, model }
       )
 
       const realAssistantId = result.assistantMessage.id?.toString()

@@ -55,44 +55,14 @@ public class ChatService
             ["content"] = m.Content 
         }).ToList();
 
-        // Build request body for OpenRouter Chat Completions API
+        // Build a clean, minimal request body for OpenRouter
+        // OpenRouter handles provider-specific parameters internally
         var bodyObj = new Dictionary<string, object>
         {
             ["model"] = request.Model,
             ["messages"] = messages,
             ["stream"] = true
         };
-
-        // Handle reasoning/thinking for supported models
-        // For OpenAI o-series: use reasoning_effort
-        // For Gemini 2.5: uses thinking by default
-        // For DeepSeek R1: uses extended thinking
-        if (!string.IsNullOrEmpty(request.ReasoningEffort) && request.ReasoningEffort != "none")
-        {
-            var modelDef = ModelCatalog.AvailableModels.FirstOrDefault(m => m.Id == request.Model);
-            if (modelDef?.SupportsReasoning == true)
-            {
-                // Request reasoning from OpenRouter
-                bodyObj["include_reasoning"] = true;
-
-                // OpenAI o-series models use reasoning_effort parameter
-                if (request.Model.StartsWith("openai/o"))
-                {
-                    bodyObj["reasoning_effort"] = request.ReasoningEffort;
-                }
-                // For other reasoning models, they use their native thinking mechanisms
-                // which are enabled by default or via provider-specific params
-            }
-        }
-        else 
-        {
-             // Even if effort is none, if model supports reasoning, we might want to see if it produces any
-             var modelDef = ModelCatalog.AvailableModels.FirstOrDefault(m => m.Id == request.Model);
-             if (modelDef?.SupportsReasoning == true)
-             {
-                 bodyObj["include_reasoning"] = true;
-             }
-        }
 
         // Add tools if available
         if (request.Tools != null && request.Tools.Count > 0)
@@ -108,8 +78,7 @@ public class ChatService
         };
 
         var jsonBody = JsonSerializer.Serialize(bodyObj, jsonOptions);
-        _logger.LogInformation("Sending request to OpenRouter: model={Model}, reasoning_effort={Effort}", 
-            request.Model, request.ReasoningEffort ?? "none");
+        _logger.LogInformation("Sending request to OpenRouter: model={Model}", request.Model);
         _logger.LogDebug("Request body: {Body}", jsonBody);
 
         httpRequest.Content = new StringContent(jsonBody, Encoding.UTF8, "application/json");
@@ -265,8 +234,7 @@ public class ChatService
 
 public class ChatRequest
 {
-    public string Model { get; set; } = "openai/gpt-5-mini";
-    public string? ReasoningEffort { get; set; } = "medium";
+    public string Model { get; set; } = "openai/gpt-4o-mini";
     public List<ChatMessage> Messages { get; set; } = new();
     
     /// <summary>
