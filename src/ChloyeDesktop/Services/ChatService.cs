@@ -72,6 +72,9 @@ public class ChatService
             var modelDef = ModelCatalog.AvailableModels.FirstOrDefault(m => m.Id == request.Model);
             if (modelDef?.SupportsReasoning == true)
             {
+                // Request reasoning from OpenRouter
+                bodyObj["include_reasoning"] = true;
+
                 // OpenAI o-series models use reasoning_effort parameter
                 if (request.Model.StartsWith("openai/o"))
                 {
@@ -80,6 +83,15 @@ public class ChatService
                 // For other reasoning models, they use their native thinking mechanisms
                 // which are enabled by default or via provider-specific params
             }
+        }
+        else 
+        {
+             // Even if effort is none, if model supports reasoning, we might want to see if it produces any
+             var modelDef = ModelCatalog.AvailableModels.FirstOrDefault(m => m.Id == request.Model);
+             if (modelDef?.SupportsReasoning == true)
+             {
+                 bodyObj["include_reasoning"] = true;
+             }
         }
 
         // Add tools if available

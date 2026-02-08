@@ -19,7 +19,7 @@ const REASONING_EFFORT_LEVELS = [
 export default function ChatPage() {
   const { conversationId } = useParams()
   const [input, setInput] = useState('')
-  const [selectedModel, setSelectedModel] = useState('openai/gpt-5-mini')
+  const [selectedModel, setSelectedModel] = useState('openai/gpt-5.2')
   const [reasoningEffort, setReasoningEffort] = useState('none')
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
