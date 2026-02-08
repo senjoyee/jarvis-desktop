@@ -176,7 +176,8 @@ public class ChatService
                             InputTokens = parsed.Usage.PromptTokens,
                             OutputTokens = parsed.Usage.CompletionTokens,
                             TotalTokens = parsed.Usage.TotalTokens,
-                            ReasoningTokens = parsed.Usage.CompletionTokensDetails?.ReasoningTokens ?? 0
+                            ReasoningTokens = parsed.Usage.CompletionTokensDetails?.ReasoningTokens ?? 0,
+                            Cost = parsed.Usage.Cost ?? 0
                         }
                     };
                 }
@@ -252,7 +253,8 @@ public class ChatService
                         InputTokens = parsed.Usage.PromptTokens,
                         OutputTokens = parsed.Usage.CompletionTokens,
                         TotalTokens = parsed.Usage.TotalTokens,
-                        ReasoningTokens = parsed.Usage.CompletionTokensDetails?.ReasoningTokens ?? 0
+                        ReasoningTokens = parsed.Usage.CompletionTokensDetails?.ReasoningTokens ?? 0,
+                        Cost = parsed.Usage.Cost ?? 0
                     };
                 }
                 yield return new StreamChunk { Done = true, Usage = usage };
@@ -368,6 +370,11 @@ public class TokenUsage
     public int OutputTokens { get; set; }
     public int ReasoningTokens { get; set; }
     public int TotalTokens { get; set; }
+    
+    /// <summary>
+    /// Cost in USD (from OpenRouter)
+    /// </summary>
+    public decimal Cost { get; set; }
 }
 
 /// <summary>
@@ -474,6 +481,12 @@ internal class UsageInfo
 
     [JsonPropertyName("total_tokens")]
     public int TotalTokens { get; set; }
+    
+    /// <summary>
+    /// Cost in credits (from OpenRouter)
+    /// </summary>
+    [JsonPropertyName("cost")]
+    public decimal? Cost { get; set; }
     
     /// <summary>
     /// Detailed breakdown of completion tokens

@@ -18,6 +18,7 @@ export interface TokenUsage {
   outputTokens: number
   reasoningTokens: number
   totalTokens: number
+  cost: number
 }
 
 export interface Message {

@@ -293,24 +293,38 @@ function ReasoningBlock({ reasoning, isStreaming }: { reasoning: string; isStrea
 }
 
 function TokenUsageDisplay({ usage }: { usage: TokenUsage }) {
+  // Calculate output tokens excluding reasoning
   const outputMinusReasoning = usage.outputTokens - usage.reasoningTokens
+
+  // Format cost - show up to 6 decimal places for small amounts
+  const formatCost = (cost: number) => {
+    if (cost === 0) return '$0.00'
+    if (cost < 0.01) return `$${cost.toFixed(6)}`
+    if (cost < 0.1) return `$${cost.toFixed(4)}`
+    return `$${cost.toFixed(2)}`
+  }
 
   return (
     <div className="token-usage">
       <span className="token-usage-item">
-        <span className="token-usage-label">In:</span> {usage.inputTokens.toLocaleString()}
+        <span className="token-usage-label">📥 Input:</span> {usage.inputTokens.toLocaleString()}
       </span>
       {usage.reasoningTokens > 0 && (
         <span className="token-usage-item">
-          <span className="token-usage-label">Reasoning:</span> {usage.reasoningTokens.toLocaleString()}
+          <span className="token-usage-label">🧠 Reasoning:</span> {usage.reasoningTokens.toLocaleString()}
         </span>
       )}
       <span className="token-usage-item">
-        <span className="token-usage-label">Out:</span> {outputMinusReasoning.toLocaleString()}
+        <span className="token-usage-label">📤 Output:</span> {outputMinusReasoning.toLocaleString()}
       </span>
       <span className="token-usage-item token-usage-total">
-        <span className="token-usage-label">Total:</span> {usage.totalTokens.toLocaleString()}
+        <span className="token-usage-label">📊 Total:</span> {usage.totalTokens.toLocaleString()}
       </span>
+      {usage.cost > 0 && (
+        <span className="token-usage-item token-usage-cost">
+          <span className="token-usage-label">💰 Cost:</span> {formatCost(usage.cost)}
+        </span>
+      )}
     </div>
   )
 }
