@@ -377,21 +377,79 @@ public class BridgeHandler
     }
 
     /// <summary>
-    /// Converts an MCP tool definition to OpenAI Responses API function format
+    /// Converts an MCP tool definition to OpenAI Chat Completions API function format
+    /// OpenRouter uses this format: https://openrouter.ai/docs/api-reference/parameters
     /// </summary>
     private object ConvertToOpenAiFunction(McpTool tool)
     {
-        // OpenAI Responses API function format (different from Chat Completions API!)
-        // Responses API expects: { type, name, description, parameters }
-        // NOT: { type, function: { name, description, parameters } }
+        // OpenAI Chat Completions API format requires:
+        // { type: "function", function: { name, description, parameters } }
+        // where parameters must have "additionalProperties": false for strict mode
+        
+        object parameters;
+        
+        if (tool.InputSchema.HasValue)
+        {
+            // Parse the existing schema and ensure additionalProperties is set to false
+            var schemaJson = tool.InputSchema.Value.GetRawText();
+            using var doc = JsonDocument.Parse(schemaJson);
+            var schemaDict = new Dictionary<string, object>();
+            
+            foreach (var prop in doc.RootElement.EnumerateObject())
+            {
+                if (prop.Value.ValueKind == JsonValueKind.Object)
+                {
+                    schemaDict[prop.Name] = JsonSerializer.Deserialize<object>(prop.Value.GetRawText())!;
+                }
+                else if (prop.Value.ValueKind == JsonValueKind.Array)
+                {
+                    schemaDict[prop.Name] = JsonSerializer.Deserialize<object>(prop.Value.GetRawText())!;
+                }
+                else if (prop.Value.ValueKind == JsonValueKind.String)
+                {
+                    schemaDict[prop.Name] = prop.Value.GetString()!;
+                }
+                else if (prop.Value.ValueKind == JsonValueKind.Number)
+                {
+                    schemaDict[prop.Name] = prop.Value.GetRawText();
+                }
+                else if (prop.Value.ValueKind == JsonValueKind.True || prop.Value.ValueKind == JsonValueKind.False)
+                {
+                    schemaDict[prop.Name] = prop.Value.GetBoolean();
+                }
+            }
+            
+            // Ensure additionalProperties is false (required by OpenAI)
+            schemaDict["additionalProperties"] = false;
+            
+            // Ensure type is "object"
+            if (!schemaDict.ContainsKey("type"))
+            {
+                schemaDict["type"] = "object";
+            }
+            
+            parameters = schemaDict;
+        }
+        else
+        {
+            parameters = new Dictionary<string, object>
+            {
+                ["type"] = "object",
+                ["properties"] = new Dictionary<string, object>(),
+                ["additionalProperties"] = false
+            };
+        }
+        
+        // Return in OpenAI Chat Completions format
         return new
         {
             type = "function",
-            name = tool.Name,
-            description = tool.Description ?? "",
-            parameters = tool.InputSchema.HasValue 
-                ? JsonSerializer.Deserialize<object>(tool.InputSchema.Value.GetRawText())
-                : new { type = "object", properties = new { } }
+            function = new
+            {
+                name = tool.Name,
+                description = tool.Description ?? "",
+                parameters = parameters
+            }
         };
     }
 
