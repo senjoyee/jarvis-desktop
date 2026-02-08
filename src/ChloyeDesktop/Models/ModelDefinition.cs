@@ -37,7 +37,7 @@ public class ModelDefinition
 }
 
 /// <summary>
-/// Static catalog of available models through OpenRouter (Updated February 2026)
+/// Static catalog of available models through OpenRouter (Updated with Verified IDs)
 /// </summary>
 public static class ModelCatalog
 {
@@ -50,16 +50,7 @@ public static class ModelCatalog
             Name = "GPT-5.2",
             Provider = "OpenAI",
             SupportsReasoning = false,
-            Description = "Latest flagship model with enhanced agentic and long context performance",
-            ContextLength = 400000
-        },
-        new ModelDefinition
-        {
-            Id = "openai/gpt-5.2-thinking",
-            Name = "GPT-5.2 Thinking",
-            Provider = "OpenAI",
-            SupportsReasoning = true,
-            Description = "GPT-5.2 with adaptive reasoning for complex tasks",
+            Description = "Latest flagship model",
             ContextLength = 400000
         },
         new ModelDefinition
@@ -68,16 +59,25 @@ public static class ModelCatalog
             Name = "GPT-5.2 Pro",
             Provider = "OpenAI",
             SupportsReasoning = true,
-            Description = "Most capable GPT-5.2 model for demanding workloads",
+            Description = "Most capable GPT-5.2 model",
             ContextLength = 400000
         },
         new ModelDefinition
         {
-            Id = "openai/gpt-5.3-codex",
-            Name = "GPT-5.3 Codex",
+            Id = "openai/gpt-5.2-chat",
+            Name = "GPT-5.2 Chat",
             Provider = "OpenAI",
             SupportsReasoning = false,
-            Description = "Specialized for code generation and software engineering",
+            Description = "Optimized for chat interactions",
+            ContextLength = 400000
+        },
+        new ModelDefinition
+        {
+            Id = "openai/gpt-5.1-codex",
+            Name = "GPT-5.1 Codex",
+            Provider = "OpenAI",
+            SupportsReasoning = false,
+            Description = "Specialized for code generation",
             ContextLength = 256000
         },
         new ModelDefinition
@@ -86,16 +86,25 @@ public static class ModelCatalog
             Name = "GPT-5 Mini",
             Provider = "OpenAI",
             SupportsReasoning = false,
-            Description = "Fast and cost-effective GPT-5 variant",
+            Description = "Fast and cost-effective",
             ContextLength = 200000
         },
         new ModelDefinition
         {
-            Id = "openai/gpt-5-nano",
-            Name = "GPT-5 Nano",
+            Id = "openai/o3-pro",
+            Name = "o3 Pro",
             Provider = "OpenAI",
-            SupportsReasoning = false,
-            Description = "Ultra-lightweight model for quick responses",
+            SupportsReasoning = true,
+            Description = "Advanced reasoning model",
+            ContextLength = 200000
+        },
+        new ModelDefinition
+        {
+            Id = "openai/o4-mini",
+            Name = "o4 Mini",
+            Provider = "OpenAI",
+            SupportsReasoning = true,
+            Description = "Fast reasoning model",
             ContextLength = 128000
         },
 
@@ -106,7 +115,7 @@ public static class ModelCatalog
             Name = "Claude Opus 4.6",
             Provider = "Anthropic",
             SupportsReasoning = true,
-            Description = "State-of-the-art for agentic coding, reasoning & knowledge work (Feb 2026)",
+            Description = "Latest flagship (Feb 2026)",
             ContextLength = 1000000
         },
         new ModelDefinition
@@ -115,7 +124,16 @@ public static class ModelCatalog
             Name = "Claude Sonnet 4.5",
             Provider = "Anthropic",
             SupportsReasoning = true,
-            Description = "Optimized for agentic workflows and coding tasks",
+            Description = "Optimized for agentic workflows",
+            ContextLength = 200000
+        },
+        new ModelDefinition
+        {
+            Id = "anthropic/claude-3.7-sonnet",
+            Name = "Claude 3.7 Sonnet",
+            Provider = "Anthropic",
+            SupportsReasoning = false,
+            Description = "Balanced performance (Series 3)",
             ContextLength = 200000
         },
         new ModelDefinition
@@ -124,36 +142,65 @@ public static class ModelCatalog
             Name = "Claude Sonnet 4",
             Provider = "Anthropic",
             SupportsReasoning = false,
-            Description = "Balanced performance and speed",
+            Description = "Balanced performance (Series 4)",
             ContextLength = 200000
         },
         new ModelDefinition
         {
-            Id = "anthropic/claude-haiku-4",
-            Name = "Claude Haiku 4",
+            Id = "anthropic/claude-haiku-4.5",
+            Name = "Claude Haiku 4.5",
             Provider = "Anthropic",
             SupportsReasoning = false,
-            Description = "Fast and affordable for high-volume tasks",
+            Description = "Fast and affordable",
             ContextLength = 200000
+        },
+
+        // ============ xAI (Grok) Models ============
+        new ModelDefinition
+        {
+            Id = "x-ai/grok-4",
+            Name = "Grok 4",
+            Provider = "xAI",
+            SupportsReasoning = true,
+            Description = "Next-gen flagship",
+            ContextLength = 131072
+        },
+        new ModelDefinition
+        {
+            Id = "x-ai/grok-4-fast",
+            Name = "Grok 4 Fast",
+            Provider = "xAI",
+            SupportsReasoning = false,
+            Description = "Speed-optimized Grok 4",
+            ContextLength = 131072
+        },
+        new ModelDefinition
+        {
+            Id = "x-ai/grok-3",
+            Name = "Grok 3",
+            Provider = "xAI",
+            SupportsReasoning = true,
+            Description = "xAI flagship",
+            ContextLength = 131072
         },
 
         // ============ Google Models ============
         new ModelDefinition
         {
-            Id = "google/gemini-3-pro",
-            Name = "Gemini 3 Pro",
+            Id = "google/gemini-3-pro-preview",
+            Name = "Gemini 3 Pro (Preview)",
             Provider = "Google",
             SupportsReasoning = true,
-            Description = "Most advanced reasoning across text, images, audio, video & code",
+            Description = "Most advanced reasoning",
             ContextLength = 1000000
         },
         new ModelDefinition
         {
-            Id = "google/gemini-3-flash",
-            Name = "Gemini 3 Flash",
+            Id = "google/gemini-3-flash-preview",
+            Name = "Gemini 3 Flash (Preview)",
             Provider = "Google",
             SupportsReasoning = true,
-            Description = "Fast multimodal with impressive reasoning",
+            Description = "Fast multimodal",
             ContextLength = 1000000
         },
         new ModelDefinition
@@ -162,7 +209,7 @@ public static class ModelCatalog
             Name = "Gemini 2.5 Pro",
             Provider = "Google",
             SupportsReasoning = true,
-            Description = "Previous generation flagship with thinking",
+            Description = "Stable flagship",
             ContextLength = 1000000
         },
         new ModelDefinition
@@ -171,8 +218,17 @@ public static class ModelCatalog
             Name = "Gemini 2.5 Flash",
             Provider = "Google",
             SupportsReasoning = true,
-            Description = "Fast Gemini with thinking support",
+            Description = "Fast stable model",
             ContextLength = 1000000
+        },
+        new ModelDefinition
+        {
+            Id = "google/gemma-3-27b-it",
+            Name = "Gemma 3 27B",
+            Provider = "Google",
+            SupportsReasoning = false,
+            Description = "Open weights model",
+            ContextLength = 8192
         },
 
         // ============ Moonshot (Kimi) Models ============
@@ -182,16 +238,7 @@ public static class ModelCatalog
             Name = "Kimi K2.5",
             Provider = "Moonshot",
             SupportsReasoning = true,
-            Description = "Open-source multimodal agent with Agent Swarm technology (Jan 2026)",
-            ContextLength = 128000
-        },
-        new ModelDefinition
-        {
-            Id = "moonshotai/kimi-k2",
-            Name = "Kimi K2",
-            Provider = "Moonshot",
-            SupportsReasoning = false,
-            Description = "Strong agentic capabilities with tool use",
+            Description = "Agent Swarm multimodal",
             ContextLength = 128000
         },
         new ModelDefinition
@@ -200,7 +247,7 @@ public static class ModelCatalog
             Name = "Kimi K2 Thinking",
             Provider = "Moonshot",
             SupportsReasoning = true,
-            Description = "Advanced reasoning optimized for long-horizon tasks",
+            Description = "Long-horizon reasoning",
             ContextLength = 128000
         },
 
@@ -211,7 +258,7 @@ public static class ModelCatalog
             Name = "DeepSeek V3.2",
             Provider = "DeepSeek",
             SupportsReasoning = false,
-            Description = "Latest DeepSeek with enhanced capabilities",
+            Description = "Latest DeepSeek model",
             ContextLength = 128000
         },
         new ModelDefinition
@@ -220,16 +267,16 @@ public static class ModelCatalog
             Name = "DeepSeek R1",
             Provider = "DeepSeek",
             SupportsReasoning = true,
-            Description = "Advanced reasoning model",
+            Description = "Advanced reasoning",
             ContextLength = 64000
         },
         new ModelDefinition
         {
             Id = "deepseek/deepseek-chat",
-            Name = "DeepSeek Chat",
+            Name = "DeepSeek Chat (V3)",
             Provider = "DeepSeek",
             SupportsReasoning = false,
-            Description = "General purpose chat model",
+            Description = "General purpose chat",
             ContextLength = 64000
         },
 
@@ -240,7 +287,7 @@ public static class ModelCatalog
             Name = "Llama 4 Maverick",
             Provider = "Meta",
             SupportsReasoning = false,
-            Description = "Latest Llama 4 with enhanced capabilities",
+            Description = "Latest Llama 4",
             ContextLength = 1000000
         },
         new ModelDefinition
@@ -249,76 +296,48 @@ public static class ModelCatalog
             Name = "Llama 4 Scout",
             Provider = "Meta",
             SupportsReasoning = false,
-            Description = "Fast and efficient Llama 4 variant",
+            Description = "Fast and efficient Llama 4",
             ContextLength = 500000
         },
-        new ModelDefinition
-        {
-            Id = "meta-llama/llama-4-behemoth",
-            Name = "Llama 4 Behemoth",
-            Provider = "Meta",
-            SupportsReasoning = true,
-            Description = "2T parameter 'teacher' model - most intelligent open LLM",
-            ContextLength = 1000000
-        },
-
-        // ============ xAI (Grok) Models ============
-        new ModelDefinition
-        {
-            Id = "x-ai/grok-3",
-            Name = "Grok 3",
-            Provider = "xAI",
-            SupportsReasoning = true,
-            Description = "xAI's flagship model with advanced reasoning",
-            ContextLength = 131072
-        },
-        new ModelDefinition
-        {
-            Id = "x-ai/grok-3-fast",
-            Name = "Grok 3 Fast",
-            Provider = "xAI",
-            SupportsReasoning = false,
-            Description = "Speed-optimized Grok 3 variant",
-            ContextLength = 131072
-        },
+        // Behemoth removed as not found in verified list
 
         // ============ Mistral Models ============
         new ModelDefinition
         {
-            Id = "mistralai/mistral-large-2501",
-            Name = "Mistral Large",
+            Id = "mistralai/mistral-large-2512",
+            Name = "Mistral Large (2512)",
             Provider = "Mistral",
             SupportsReasoning = false,
-            Description = "Flagship Mistral model (Jan 2025)",
+            Description = "Latest Mistral Large",
             ContextLength = 128000
         },
         new ModelDefinition
         {
-            Id = "mistralai/codestral-2501",
-            Name = "Codestral",
+            Id = "mistralai/mistral-small-3",
+            Name = "Mistral Small 3",
             Provider = "Mistral",
             SupportsReasoning = false,
-            Description = "Specialized for code generation",
+            Description = "Latest Mistral Small",
+            ContextLength = 128000
+        },
+        new ModelDefinition
+        {
+            Id = "mistralai/codestral-2508",
+            Name = "Codestral (2508)",
+            Provider = "Mistral",
+            SupportsReasoning = false,
+            Description = "Code specialized",
             ContextLength = 256000
-        },
-        new ModelDefinition
-        {
-            Id = "mistralai/mistral-small-2501",
-            Name = "Mistral Small",
-            Provider = "Mistral",
-            SupportsReasoning = false,
-            Description = "Cost-effective for simpler tasks",
-            ContextLength = 128000
         },
 
         // ============ Qwen Models ============
         new ModelDefinition
         {
-            Id = "qwen/qwen-3-235b",
-            Name = "Qwen 3 235B",
+            Id = "qwen/qwen3-max",
+            Name = "Qwen 3 Max",
             Provider = "Qwen",
             SupportsReasoning = true,
-            Description = "Alibaba's most capable model",
+            Description = "Most capable Qwen model",
             ContextLength = 131072
         },
         new ModelDefinition
@@ -327,36 +346,27 @@ public static class ModelCatalog
             Name = "QwQ 32B",
             Provider = "Qwen",
             SupportsReasoning = true,
-            Description = "Qwen reasoning model",
+            Description = "Reasoning model",
             ContextLength = 131072
         },
-        new ModelDefinition
+         new ModelDefinition
         {
-            Id = "qwen/qwen-2.5-coder-32b",
-            Name = "Qwen 2.5 Coder 32B",
+            Id = "qwen/qwen3-coder-plus",
+            Name = "Qwen 3 Coder Plus",
             Provider = "Qwen",
             SupportsReasoning = false,
-            Description = "Specialized for code tasks",
+            Description = "Advanced coding model",
             ContextLength = 131072
         },
 
-        // ============ Other Notable Models ============
-        new ModelDefinition
-        {
-            Id = "black-forest-labs/flux-2-pro",
-            Name = "FLUX 2 Pro",
-            Provider = "Black Forest",
-            SupportsReasoning = false,
-            Description = "State-of-the-art image generation",
-            ContextLength = 8192
-        },
+        // ============ Other ============
         new ModelDefinition
         {
             Id = "openrouter/auto",
-            Name = "Auto (Best for prompt)",
+            Name = "Auto Router",
             Provider = "OpenRouter",
             SupportsReasoning = false,
-            Description = "Automatically selects the best model for your prompt",
+            Description = "Auto-selects best model",
             ContextLength = 128000
         }
     };
