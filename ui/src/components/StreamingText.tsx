@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism'
 
@@ -19,7 +20,7 @@ export function appendToStreamingText(messageId: string, delta: string) {
   // Accumulate content
   const current = contentBuffers.get(messageId) || ''
   contentBuffers.set(messageId, current + delta)
-  
+
   // Throttled React update for markdown rendering
   if (!throttleTimers.has(messageId)) {
     const timer = window.setTimeout(() => {
@@ -45,7 +46,7 @@ export function clearStreamingRefs() {
 export default function StreamingText({ messageId, initialContent }: StreamingTextProps) {
   const [, forceUpdate] = useState(0)
   const mounted = useRef(false)
-  
+
   const triggerUpdate = useCallback(() => {
     forceUpdate(n => n + 1)
   }, [])
@@ -56,10 +57,10 @@ export default function StreamingText({ messageId, initialContent }: StreamingTe
       contentBuffers.set(messageId, initialContent)
       mounted.current = true
     }
-    
+
     // Register callback for throttled updates
     updateCallbacks.set(messageId, triggerUpdate)
-    
+
     return () => {
       updateCallbacks.delete(messageId)
       const timer = throttleTimers.get(messageId)
@@ -74,6 +75,7 @@ export default function StreamingText({ messageId, initialContent }: StreamingTe
 
   return (
     <ReactMarkdown
+      remarkPlugins={[remarkGfm]}
       components={{
         code({ className, children, ...props }) {
           const match = /language-(\w+)/.exec(className || '')

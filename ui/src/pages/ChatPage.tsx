@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom'
 import { Button, Select } from '@fluentui/react-components'
 import { SendRegular, StopRegular, ChevronDownRegular, ChevronRightRegular } from '@fluentui/react-icons'
 import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import { useStore } from '../store'
@@ -174,6 +175,7 @@ export default function ChatPage() {
                 <StreamingText messageId={message.id} initialContent={message.content || ''} />
               ) : (
                 <ReactMarkdown
+                  remarkPlugins={[remarkGfm]}
                   components={{
                     code({ className, children, ...props }) {
                       const match = /language-(\w+)/.exec(className || '')
@@ -261,7 +263,7 @@ export default function ChatPage() {
           </div>
         </div>
       </div>
-    </div>
+    </div >
   )
 }
 
