@@ -67,3 +67,12 @@ export interface BridgeResponse {
   result?: unknown
   error?: { message: string }
 }
+
+export interface ModelDefinition {
+  id: string
+  name: string
+  provider: string
+  supportsReasoning: boolean
+  description?: string
+  contextLength: number
+}

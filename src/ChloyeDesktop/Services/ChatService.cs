@@ -5,6 +5,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.Logging;
+using ChloyeDesktop.Models;
 
 namespace ChloyeDesktop.Services;
 
@@ -14,11 +15,8 @@ public class ChatService
     private readonly SecretsService _secrets;
     private readonly HttpClient _httpClient;
 
-    // Available models
-    public static readonly string[] AvailableModels = { "gpt-5.2", "gpt-5-mini" };
-    
-    // Available reasoning effort levels
-    public static readonly string[] ReasoningEffortLevels = { "none", "low", "medium", "high" };
+    // OpenRouter API endpoint
+    private const string OpenRouterBaseUrl = "https://openrouter.ai/api/v1/chat/completions";
 
     public ChatService(ILogger<ChatService> logger, SecretsService secrets)
     {
@@ -30,39 +28,58 @@ public class ChatService
         };
     }
 
+    /// <summary>
+    /// Get all available models from the catalog
+    /// </summary>
+    public static ModelDefinition[] GetAvailableModels() => ModelCatalog.AvailableModels;
+
     public async IAsyncEnumerable<StreamChunk> StreamCompletionAsync(
         ChatRequest request,
         [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        var apiKey = _secrets.GetSecret("OpenAI");
+        var apiKey = _secrets.GetSecret("OpenRouter");
         if (string.IsNullOrEmpty(apiKey))
         {
-            throw new InvalidOperationException("OpenAI API key not configured");
+            throw new InvalidOperationException("OpenRouter API key not configured. Please add your API key in Settings.");
         }
 
-        // Use OpenAI Responses API
-        var httpRequest = new HttpRequestMessage(HttpMethod.Post, "https://api.openai.com/v1/responses");
+        var httpRequest = new HttpRequestMessage(HttpMethod.Post, OpenRouterBaseUrl);
         httpRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
+        httpRequest.Headers.Add("HTTP-Referer", "https://jarvis-desktop.local");
+        httpRequest.Headers.Add("X-Title", "Jarvis Desktop");
 
-        // Build input from messages
-        var input = request.Messages.Select(m => new 
+        // Build messages array for Chat Completions API
+        var messages = request.Messages.Select(m => new Dictionary<string, object>
         { 
-            role = m.Role == "user" ? "user" : (m.Role == "assistant" ? "assistant" : "developer"),
-            content = m.Content 
+            ["role"] = m.Role == "system" ? "system" : (m.Role == "user" ? "user" : "assistant"),
+            ["content"] = m.Content 
         }).ToList();
 
-        // Build request body for Responses API
+        // Build request body for OpenRouter Chat Completions API
         var bodyObj = new Dictionary<string, object>
         {
             ["model"] = request.Model,
-            ["input"] = input,
+            ["messages"] = messages,
             ["stream"] = true
         };
 
-        // Add reasoning effort if specified
+        // Handle reasoning/thinking for supported models
+        // For OpenAI o-series: use reasoning_effort
+        // For Gemini 2.5: uses thinking by default
+        // For DeepSeek R1: uses extended thinking
         if (!string.IsNullOrEmpty(request.ReasoningEffort) && request.ReasoningEffort != "none")
         {
-            bodyObj["reasoning"] = new { effort = request.ReasoningEffort, summary = "auto" };
+            var modelDef = ModelCatalog.AvailableModels.FirstOrDefault(m => m.Id == request.Model);
+            if (modelDef?.SupportsReasoning == true)
+            {
+                // OpenAI o-series models use reasoning_effort parameter
+                if (request.Model.StartsWith("openai/o"))
+                {
+                    bodyObj["reasoning_effort"] = request.ReasoningEffort;
+                }
+                // For other reasoning models, they use their native thinking mechanisms
+                // which are enabled by default or via provider-specific params
+            }
         }
 
         // Add tools if available
@@ -70,9 +87,6 @@ public class ChatService
         {
             bodyObj["tools"] = request.Tools;
             _logger.LogInformation("Including {ToolCount} tools in request", request.Tools.Count);
-            // Debug: log the first tool structure
-            var debugJson = JsonSerializer.Serialize(request.Tools[0], new JsonSerializerOptions { WriteIndented = true });
-            _logger.LogDebug("First tool structure: {Tool}", debugJson);
         }
 
         var jsonOptions = new JsonSerializerOptions
@@ -81,13 +95,12 @@ public class ChatService
             DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
         };
 
-        _logger.LogInformation("Sending request to Responses API: model={Model}, reasoning_effort={Effort}, tools={ToolCount}", 
-            request.Model, request.ReasoningEffort ?? "none", request.Tools?.Count ?? 0);
+        var jsonBody = JsonSerializer.Serialize(bodyObj, jsonOptions);
+        _logger.LogInformation("Sending request to OpenRouter: model={Model}, reasoning_effort={Effort}", 
+            request.Model, request.ReasoningEffort ?? "none");
+        _logger.LogDebug("Request body: {Body}", jsonBody);
 
-        httpRequest.Content = new StringContent(
-            JsonSerializer.Serialize(bodyObj, jsonOptions),
-            Encoding.UTF8,
-            "application/json");
+        httpRequest.Content = new StringContent(jsonBody, Encoding.UTF8, "application/json");
 
         using var response = await _httpClient.SendAsync(
             httpRequest,
@@ -97,8 +110,8 @@ public class ChatService
         if (!response.IsSuccessStatusCode)
         {
             var error = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
-            _logger.LogError("OpenAI Responses API error: {StatusCode} - {Error}", response.StatusCode, error);
-            throw new HttpRequestException($"OpenAI API error: {response.StatusCode} - {error}");
+            _logger.LogError("OpenRouter API error: {StatusCode} - {Error}", response.StatusCode, error);
+            throw new HttpRequestException($"OpenRouter API error: {response.StatusCode} - {error}");
         }
 
         using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
@@ -123,10 +136,10 @@ public class ChatService
                 yield break;
             }
 
-            ResponsesStreamEvent? parsed;
+            ChatCompletionStreamEvent? parsed;
             try
             {
-                parsed = JsonSerializer.Deserialize<ResponsesStreamEvent>(data);
+                parsed = JsonSerializer.Deserialize<ChatCompletionStreamEvent>(data);
             }
             catch (Exception ex)
             {
@@ -134,144 +147,77 @@ public class ChatService
                 continue;
             }
 
-            _logger.LogDebug("Stream event type: {Type}", parsed?.Type ?? "(null)");
+            if (parsed?.Choices == null || parsed.Choices.Count == 0)
+                continue;
 
-            // Handle different event types from Responses API
-            // Handle reasoning/thinking tokens - match all known variants
-            if (parsed?.Type != null && (
-                    parsed.Type.Contains("reasoning") && parsed.Type.Contains("delta")))
+            var choice = parsed.Choices[0];
+            var delta = choice.Delta;
+
+            if (delta == null) continue;
+
+            // Handle content delta
+            if (!string.IsNullOrEmpty(delta.Content))
             {
-                using var doc = JsonDocument.Parse(data);
-                string? reasoningText = null;
-                
-                if (doc.RootElement.TryGetProperty("delta", out var rd))
-                    reasoningText = rd.GetString();
-                else if (doc.RootElement.TryGetProperty("text", out var rt))
-                    reasoningText = rt.GetString();
-                
-                if (!string.IsNullOrEmpty(reasoningText))
-                {
-                    yield return new StreamChunk { Reasoning = reasoningText };
-                }
+                yield return new StreamChunk { Content = delta.Content };
             }
-            else if (parsed?.Type == "response.output_text.delta")
+
+            // Handle reasoning/thinking content (some models return this separately)
+            if (!string.IsNullOrEmpty(delta.Reasoning))
             {
-                // Extract delta from raw JSON using JsonDocument
-                using var doc = JsonDocument.Parse(data);
-                string? deltaText = null;
-                
-                // Try different possible field names
-                if (doc.RootElement.TryGetProperty("text_delta", out var td))
-                    deltaText = td.GetString();
-                else if (doc.RootElement.TryGetProperty("delta", out var d))
-                    deltaText = d.GetString();
-                else if (doc.RootElement.TryGetProperty("text", out var t))
-                    deltaText = t.GetString();
-                
-                if (!string.IsNullOrEmpty(deltaText))
-                {
-                    yield return new StreamChunk { Content = deltaText };
-                }
+                yield return new StreamChunk { Reasoning = delta.Reasoning };
             }
-            // Handle function call start
-            else if (parsed?.Type == "response.function_call_arguments.start" || 
-                     parsed?.Type == "response.output_item.added")
+
+            // Handle tool calls
+            if (delta.ToolCalls != null && delta.ToolCalls.Count > 0)
             {
-                using var doc = JsonDocument.Parse(data);
-                
-                // Try to get tool name from the event
-                if (doc.RootElement.TryGetProperty("item", out var item))
+                foreach (var toolCall in delta.ToolCalls)
                 {
-                    if (item.TryGetProperty("call_id", out var callId))
-                        currentToolCallId = callId.GetString();
-                    if (item.TryGetProperty("name", out var name))
-                        currentToolName = name.GetString();
-                }
-                else if (doc.RootElement.TryGetProperty("name", out var directName))
-                {
-                    currentToolName = directName.GetString();
-                }
-                
-                if (!string.IsNullOrEmpty(currentToolName))
-                {
-                    _logger.LogDebug("Function call started: {ToolName}", currentToolName);
-                    currentToolArgs.Clear();
-                }
-            }
-            // Handle function call arguments streaming
-            else if (parsed?.Type == "response.function_call_arguments.delta")
-            {
-                using var doc = JsonDocument.Parse(data);
-                if (doc.RootElement.TryGetProperty("delta", out var delta))
-                {
-                    currentToolArgs.Append(delta.GetString());
-                }
-            }
-            // Handle function call complete
-            else if (parsed?.Type == "response.function_call_arguments.done" ||
-                     parsed?.Type == "response.output_item.done")
-            {
-                if (!string.IsNullOrEmpty(currentToolName))
-                {
-                    using var doc = JsonDocument.Parse(data);
-                    string? arguments = currentToolArgs.ToString();
-                    
-                    // Try to get arguments from the done event if not accumulated
-                    if (string.IsNullOrEmpty(arguments) && doc.RootElement.TryGetProperty("item", out var item))
+                    if (toolCall.Function?.Name != null)
                     {
-                        if (item.TryGetProperty("arguments", out var args))
-                        {
-                            arguments = args.GetString();
-                        }
+                        // New tool call starting
+                        currentToolCallId = toolCall.Id ?? Guid.NewGuid().ToString();
+                        currentToolName = toolCall.Function.Name;
+                        currentToolArgs.Clear();
+                        _logger.LogDebug("Tool call starting: {Name}", currentToolName);
                     }
 
-                    _logger.LogInformation("Function call complete: {ToolName} with args: {Args}", 
-                        currentToolName, arguments?.Substring(0, Math.Min(100, arguments?.Length ?? 0)));
-
-                    yield return new StreamChunk
+                    if (toolCall.Function?.Arguments != null)
                     {
-                        ToolCall = new ToolCallInfo
-                        {
-                            Id = currentToolCallId ?? Guid.NewGuid().ToString(),
-                            Name = currentToolName,
-                            Arguments = arguments ?? "{}"
-                        }
-                    };
-
-                    // Reset state
-                    currentToolCallId = null;
-                    currentToolName = null;
-                    currentToolArgs.Clear();
+                        currentToolArgs.Append(toolCall.Function.Arguments);
+                    }
                 }
             }
-            else if (parsed?.Type == "response.completed" || parsed?.Type == "response.done")
+
+            // Check for finish reason
+            if (choice.FinishReason == "tool_calls" && !string.IsNullOrEmpty(currentToolName))
             {
-                // Extract token usage from the completed response
+                _logger.LogInformation("Tool call complete: {ToolName}", currentToolName);
+                yield return new StreamChunk
+                {
+                    ToolCall = new ToolCallInfo
+                    {
+                        Id = currentToolCallId ?? Guid.NewGuid().ToString(),
+                        Name = currentToolName,
+                        Arguments = currentToolArgs.ToString()
+                    }
+                };
+                currentToolCallId = null;
+                currentToolName = null;
+                currentToolArgs.Clear();
+            }
+
+            if (choice.FinishReason == "stop")
+            {
+                // Extract usage if available
                 TokenUsage? usage = null;
-                try
+                if (parsed.Usage != null)
                 {
-                    using var doc = JsonDocument.Parse(data);
-                    if (doc.RootElement.TryGetProperty("response", out var resp) &&
-                        resp.TryGetProperty("usage", out var usageEl))
+                    usage = new TokenUsage
                     {
-                        usage = new TokenUsage();
-                        if (usageEl.TryGetProperty("input_tokens", out var inp))
-                            usage.InputTokens = inp.GetInt32();
-                        if (usageEl.TryGetProperty("output_tokens", out var outp))
-                            usage.OutputTokens = outp.GetInt32();
-                        if (usageEl.TryGetProperty("total_tokens", out var tot))
-                            usage.TotalTokens = tot.GetInt32();
-                        // Reasoning tokens are nested in output_tokens_details
-                        if (usageEl.TryGetProperty("output_tokens_details", out var details) &&
-                            details.TryGetProperty("reasoning_tokens", out var reas))
-                            usage.ReasoningTokens = reas.GetInt32();
-                        _logger.LogInformation("Token usage - input: {Input}, output: {Output}, reasoning: {Reasoning}",
-                            usage.InputTokens, usage.OutputTokens, usage.ReasoningTokens);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogDebug("Failed to parse usage from completed event: {Error}", ex.Message);
+                        InputTokens = parsed.Usage.PromptTokens,
+                        OutputTokens = parsed.Usage.CompletionTokens,
+                        TotalTokens = parsed.Usage.TotalTokens
+                    };
                 }
                 yield return new StreamChunk { Done = true, Usage = usage };
                 yield break;
@@ -281,7 +227,7 @@ public class ChatService
 
     public async Task<bool> TestConnectionAsync()
     {
-        var apiKey = _secrets.GetSecret("OpenAI");
+        var apiKey = _secrets.GetSecret("OpenRouter");
         if (string.IsNullOrEmpty(apiKey))
         {
             return false;
@@ -289,15 +235,17 @@ public class ChatService
 
         try
         {
-            var request = new HttpRequestMessage(HttpMethod.Get, "https://api.openai.com/v1/models");
+            // Test by calling the models endpoint
+            var request = new HttpRequestMessage(HttpMethod.Get, "https://openrouter.ai/api/v1/models");
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
+            request.Headers.Add("HTTP-Referer", "https://jarvis-desktop.local");
 
             var response = await _httpClient.SendAsync(request).ConfigureAwait(false);
             return response.IsSuccessStatusCode;
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "OpenAI connection test failed");
+            _logger.LogWarning(ex, "OpenRouter connection test failed");
             return false;
         }
     }
@@ -305,7 +253,7 @@ public class ChatService
 
 public class ChatRequest
 {
-    public string Model { get; set; } = "gpt-5.2";
+    public string Model { get; set; } = "openai/gpt-4o-mini";
     public string? ReasoningEffort { get; set; } = "medium";
     public List<ChatMessage> Messages { get; set; } = new();
     
@@ -363,30 +311,78 @@ public class ToolCallInfo
     public string Arguments { get; set; } = "{}";
 }
 
-// Responses API stream event
-internal class ResponsesStreamEvent
-{
-    [JsonPropertyName("type")]
-    public string? Type { get; set; }
-
-    [JsonPropertyName("text_delta")]
-    public string? TextDelta { get; set; }
-
-    [JsonPropertyName("delta")]
-    public string? Delta { get; set; }
-
-    [JsonPropertyName("response")]
-    public ResponsesResponse? Response { get; set; }
-}
-
-internal class ResponsesResponse
+// OpenRouter/OpenAI Chat Completions stream event models
+internal class ChatCompletionStreamEvent
 {
     [JsonPropertyName("id")]
     public string? Id { get; set; }
 
-    [JsonPropertyName("status")]
-    public string? Status { get; set; }
+    [JsonPropertyName("choices")]
+    public List<StreamChoice>? Choices { get; set; }
 
-    [JsonPropertyName("output_text")]
-    public string? OutputText { get; set; }
+    [JsonPropertyName("usage")]
+    public UsageInfo? Usage { get; set; }
+}
+
+internal class StreamChoice
+{
+    [JsonPropertyName("index")]
+    public int Index { get; set; }
+
+    [JsonPropertyName("delta")]
+    public StreamDelta? Delta { get; set; }
+
+    [JsonPropertyName("finish_reason")]
+    public string? FinishReason { get; set; }
+}
+
+internal class StreamDelta
+{
+    [JsonPropertyName("role")]
+    public string? Role { get; set; }
+
+    [JsonPropertyName("content")]
+    public string? Content { get; set; }
+
+    [JsonPropertyName("reasoning")]
+    public string? Reasoning { get; set; }
+
+    [JsonPropertyName("tool_calls")]
+    public List<ToolCallDelta>? ToolCalls { get; set; }
+}
+
+internal class ToolCallDelta
+{
+    [JsonPropertyName("index")]
+    public int Index { get; set; }
+
+    [JsonPropertyName("id")]
+    public string? Id { get; set; }
+
+    [JsonPropertyName("type")]
+    public string? Type { get; set; }
+
+    [JsonPropertyName("function")]
+    public FunctionCallDelta? Function { get; set; }
+}
+
+internal class FunctionCallDelta
+{
+    [JsonPropertyName("name")]
+    public string? Name { get; set; }
+
+    [JsonPropertyName("arguments")]
+    public string? Arguments { get; set; }
+}
+
+internal class UsageInfo
+{
+    [JsonPropertyName("prompt_tokens")]
+    public int PromptTokens { get; set; }
+
+    [JsonPropertyName("completion_tokens")]
+    public int CompletionTokens { get; set; }
+
+    [JsonPropertyName("total_tokens")]
+    public int TotalTokens { get; set; }
 }

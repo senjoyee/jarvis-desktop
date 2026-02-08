@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using ChloyeDesktop.Models;
 using ChloyeDesktop.Services;
 
 namespace ChloyeDesktop.Bridge;
@@ -82,11 +83,14 @@ public class BridgeHandler
             "messages.send" => await HandleSendMessage(parameters),
             "messages.stopStream" => StopStream(),
 
-            // Settings
-            "settings.hasApiKey" => _secrets.HasSecret("OpenAI"),
+            // Settings (OpenRouter)
+            "settings.hasApiKey" => _secrets.HasSecret("OpenRouter"),
             "settings.setApiKey" => SetApiKey(parameters?.GetProperty("key").GetString()!),
-            "settings.clearApiKey" => _secrets.DeleteSecret("OpenAI"),
-            "settings.testOpenAI" => await _chat.TestConnectionAsync(),
+            "settings.clearApiKey" => _secrets.DeleteSecret("OpenRouter"),
+            "settings.testOpenRouter" => await _chat.TestConnectionAsync(),
+
+            // Models
+            "models.list" => GetAvailableModels(),
 
             // MCP Servers
             "mcp.list" => ListMcpServersWithStatus(),
@@ -402,7 +406,7 @@ public class BridgeHandler
     private string BuildSystemPrompt(List<string> connectedServers, List<McpToolWithServer> tools)
     {
         var sb = new System.Text.StringBuilder();
-        sb.AppendLine("You are Chloye, a helpful AI assistant running in a desktop application.");
+        sb.AppendLine("You are Jarvis, a helpful AI assistant running in a desktop application.");
         sb.AppendLine();
         sb.AppendLine("## MCP (Model Context Protocol) Integration");
         sb.AppendLine("This application supports MCP servers which provide you with tools to interact with external systems.");
@@ -520,8 +524,21 @@ public class BridgeHandler
 
     private bool SetApiKey(string key)
     {
-        _secrets.SetSecret("OpenAI", key);
+        _secrets.SetSecret("OpenRouter", key);
         return true;
+    }
+
+    private object GetAvailableModels()
+    {
+        return ModelCatalog.AvailableModels.Select(m => new
+        {
+            id = m.Id,
+            name = m.Name,
+            provider = m.Provider,
+            supportsReasoning = m.SupportsReasoning,
+            description = m.Description,
+            contextLength = m.ContextLength
+        }).ToList();
     }
 
     private object ListMcpServersWithStatus()

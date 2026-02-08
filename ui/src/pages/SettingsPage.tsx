@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Button, Input, Spinner } from '@fluentui/react-components'
-import { CheckmarkRegular, DismissRegular } from '@fluentui/react-icons'
+import { CheckmarkRegular, DismissRegular, OpenRegular } from '@fluentui/react-icons'
 import { useStore } from '../store'
 
 export default function SettingsPage() {
@@ -12,11 +12,14 @@ export default function SettingsPage() {
   const checkApiKey = useStore((state) => state.checkApiKey)
   const setStoreApiKey = useStore((state) => state.setApiKey)
   const clearApiKey = useStore((state) => state.clearApiKey)
-  const testOpenAI = useStore((state) => state.testOpenAI)
+  const testOpenRouter = useStore((state) => state.testOpenRouter)
+  const availableModels = useStore((state) => state.availableModels)
+  const loadModels = useStore((state) => state.loadModels)
 
   useEffect(() => {
     checkApiKey()
-  }, [checkApiKey])
+    loadModels()
+  }, [checkApiKey, loadModels])
 
   const handleSaveKey = async () => {
     if (!apiKey.trim()) return
@@ -34,7 +37,7 @@ export default function SettingsPage() {
     setIsTesting(true)
     setTestResult(null)
     try {
-      const result = await testOpenAI()
+      const result = await testOpenRouter()
       setTestResult(result)
     } catch {
       setTestResult(false)
@@ -42,20 +45,33 @@ export default function SettingsPage() {
     setIsTesting(false)
   }
 
+  // Get unique providers from models
+  const providers = [...new Set(availableModels.map(m => m.provider))].sort()
+
   return (
     <div className="settings-page">
       <h1 style={{ marginBottom: 32 }}>Settings</h1>
 
       <div className="settings-section">
-        <h3>OpenAI API Key</h3>
+        <h3>OpenRouter API Key</h3>
+        <p style={{ color: '#888', marginBottom: 8, fontSize: 14 }}>
+          OpenRouter provides unified access to AI models from multiple providers.
+        </p>
         <p style={{ color: '#888', marginBottom: 16, fontSize: 14 }}>
-          Your API key is stored securely in Windows Credential Manager.
+          <a
+            href="https://openrouter.ai/keys"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: '#60a5fa', textDecoration: 'none' }}
+          >
+            Get your API key from openrouter.ai <OpenRegular style={{ verticalAlign: 'middle' }} />
+          </a>
         </p>
 
         {hasApiKey ? (
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-              <span style={{ color: '#28a745' }}>✓ API key is configured</span>
+              <span style={{ color: '#28a745' }}>✓ OpenRouter API key is configured</span>
               <Button appearance="secondary" onClick={handleClearKey}>
                 Clear Key
               </Button>
@@ -92,12 +108,12 @@ export default function SettingsPage() {
         ) : (
           <div>
             <div className="form-group">
-              <label>Enter your OpenAI API key</label>
+              <label>Enter your OpenRouter API key</label>
               <Input
                 type="password"
                 value={apiKey}
                 onChange={(_, data) => setApiKey(data.value)}
-                placeholder="sk-..."
+                placeholder="sk-or-..."
                 style={{ width: '100%', maxWidth: 400 }}
               />
             </div>
@@ -113,6 +129,39 @@ export default function SettingsPage() {
       </div>
 
       <div className="settings-section">
+        <h3>Available AI Providers</h3>
+        <p style={{ color: '#888', marginBottom: 16, fontSize: 14 }}>
+          With OpenRouter, you have access to {availableModels.length} models from {providers.length} providers:
+        </p>
+        <div style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          gap: 8,
+          marginBottom: 8
+        }}>
+          {providers.map(provider => {
+            const count = availableModels.filter(m => m.provider === provider).length
+            return (
+              <span
+                key={provider}
+                style={{
+                  padding: '4px 12px',
+                  background: 'rgba(255,255,255,0.1)',
+                  borderRadius: 16,
+                  fontSize: 13
+                }}
+              >
+                {provider} ({count})
+              </span>
+            )
+          })}
+        </div>
+        <p style={{ color: '#666', fontSize: 12, marginTop: 8 }}>
+          🧠 = Supports reasoning/thinking mode
+        </p>
+      </div>
+
+      <div className="settings-section">
         <h3>Data Storage</h3>
         <p style={{ color: '#888', fontSize: 14 }}>
           Conversations and settings are stored locally in:
@@ -125,17 +174,17 @@ export default function SettingsPage() {
           borderRadius: 4,
           fontSize: 13
         }}>
-          %LOCALAPPDATA%\ChloyeDesktop
+          %LOCALAPPDATA%\JarvisDesktop
         </code>
       </div>
 
       <div className="settings-section">
         <h3>About</h3>
         <p style={{ color: '#888', fontSize: 14 }}>
-          Jarvis Desktop v1.0.0
+          Jarvis Desktop v1.1.0
         </p>
         <p style={{ color: '#888', fontSize: 14, marginTop: 8 }}>
-          A Windows desktop chat client with MCP support.
+          A Windows desktop AI chat client with MCP support and multi-provider models via OpenRouter.
         </p>
       </div>
     </div>

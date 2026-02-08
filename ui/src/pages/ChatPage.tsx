@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import { useParams } from 'react-router-dom'
 import { Button, Select } from '@fluentui/react-components'
 import { SendRegular, StopRegular, ChevronDownRegular, ChevronRightRegular } from '@fluentui/react-icons'
@@ -8,11 +8,6 @@ import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import { useStore } from '../store'
 import StreamingText from '../components/StreamingText'
 import type { ToolCallDetail, TokenUsage } from '../types'
-
-const AVAILABLE_MODELS = [
-  { value: 'gpt-5.2', label: 'GPT-5.2' },
-  { value: 'gpt-5-mini', label: 'GPT-5 Mini' },
-]
 
 const REASONING_EFFORT_LEVELS = [
   { value: 'none', label: 'None (Fastest)' },
@@ -24,7 +19,7 @@ const REASONING_EFFORT_LEVELS = [
 export default function ChatPage() {
   const { conversationId } = useParams()
   const [input, setInput] = useState('')
-  const [selectedModel, setSelectedModel] = useState('gpt-5-mini')
+  const [selectedModel, setSelectedModel] = useState('openai/gpt-4o-mini')
   const [reasoningEffort, setReasoningEffort] = useState('none')
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -38,10 +33,32 @@ export default function ChatPage() {
   const stopStream = useStore((state) => state.stopStream)
   const hasApiKey = useStore((state) => state.hasApiKey)
   const checkApiKey = useStore((state) => state.checkApiKey)
+  const availableModels = useStore((state) => state.availableModels)
+  const loadModels = useStore((state) => state.loadModels)
+
+  // Group models by provider for the dropdown
+  const modelsByProvider = useMemo(() => {
+    const grouped: Record<string, typeof availableModels> = {}
+    for (const model of availableModels) {
+      if (!grouped[model.provider]) {
+        grouped[model.provider] = []
+      }
+      grouped[model.provider].push(model)
+    }
+    return grouped
+  }, [availableModels])
+
+  // Check if selected model supports reasoning
+  const selectedModelDef = useMemo(() => {
+    return availableModels.find(m => m.id === selectedModel)
+  }, [availableModels, selectedModel])
+
+  const supportsReasoning = selectedModelDef?.supportsReasoning ?? false
 
   useEffect(() => {
     checkApiKey()
-  }, [checkApiKey])
+    loadModels()
+  }, [checkApiKey, loadModels])
 
   useEffect(() => {
     if (conversationId && conversationId !== currentConversationId) {
@@ -52,6 +69,13 @@ export default function ChatPage() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
+
+  // Reset reasoning effort when switching to a non-reasoning model
+  useEffect(() => {
+    if (!supportsReasoning && reasoningEffort !== 'none') {
+      setReasoningEffort('none')
+    }
+  }, [supportsReasoning, reasoningEffort])
 
   const handleSend = async () => {
     if (!input.trim() || isStreaming) return
@@ -75,6 +99,12 @@ export default function ChatPage() {
     }
   }
 
+  // Get display name for model (strip provider prefix)
+  const getModelDisplayName = (modelId: string) => {
+    const model = availableModels.find(m => m.id === modelId)
+    return model?.name || modelId.split('/').pop() || modelId
+  }
+
   if (!currentConversationId && messages.length === 0) {
     return (
       <div className="chat-container">
@@ -83,7 +113,7 @@ export default function ChatPage() {
           <p>Start a new conversation or select one from the sidebar.</p>
           {!hasApiKey && (
             <p style={{ marginTop: 16, color: '#ffc107' }}>
-              ⚠️ Please set your OpenAI API key in Settings to start chatting.
+              ⚠️ Please set your OpenRouter API key in Settings to start chatting.
             </p>
           )}
         </div>
@@ -95,24 +125,32 @@ export default function ChatPage() {
                 value={selectedModel}
                 onChange={(_, data) => setSelectedModel(data.value)}
                 size="small"
+                style={{ minWidth: 200 }}
               >
-                {AVAILABLE_MODELS.map((model) => (
-                  <option key={model.value} value={model.value}>
-                    {model.label}
-                  </option>
+                {Object.entries(modelsByProvider).map(([provider, models]) => (
+                  <optgroup key={provider} label={provider}>
+                    {models.map((model) => (
+                      <option key={model.id} value={model.id}>
+                        {model.name}
+                        {model.supportsReasoning ? ' 🧠' : ''}
+                      </option>
+                    ))}
+                  </optgroup>
                 ))}
               </Select>
-              <Select
-                value={reasoningEffort}
-                onChange={(_, data) => setReasoningEffort(data.value)}
-                size="small"
-              >
-                {REASONING_EFFORT_LEVELS.map((level) => (
-                  <option key={level.value} value={level.value}>
-                    Reasoning: {level.label}
-                  </option>
-                ))}
-              </Select>
+              {supportsReasoning && (
+                <Select
+                  value={reasoningEffort}
+                  onChange={(_, data) => setReasoningEffort(data.value)}
+                  size="small"
+                >
+                  {REASONING_EFFORT_LEVELS.map((level) => (
+                    <option key={level.value} value={level.value}>
+                      Reasoning: {level.label}
+                    </option>
+                  ))}
+                </Select>
+              )}
             </div>
             <div className="composer-row">
               <div className="composer-input">
@@ -150,7 +188,7 @@ export default function ChatPage() {
               {message.role === 'user' ? 'You' : 'Assistant'}
               {message.model && (
                 <span className="message-model-tag">
-                  ({message.model})
+                  ({getModelDisplayName(message.model)})
                 </span>
               )}
             </div>
@@ -212,24 +250,32 @@ export default function ChatPage() {
               value={selectedModel}
               onChange={(_, data) => setSelectedModel(data.value)}
               size="small"
+              style={{ minWidth: 200 }}
             >
-              {AVAILABLE_MODELS.map((model) => (
-                <option key={model.value} value={model.value}>
-                  {model.label}
-                </option>
+              {Object.entries(modelsByProvider).map(([provider, models]) => (
+                <optgroup key={provider} label={provider}>
+                  {models.map((model) => (
+                    <option key={model.id} value={model.id}>
+                      {model.name}
+                      {model.supportsReasoning ? ' 🧠' : ''}
+                    </option>
+                  ))}
+                </optgroup>
               ))}
             </Select>
-            <Select
-              value={reasoningEffort}
-              onChange={(_, data) => setReasoningEffort(data.value)}
-              size="small"
-            >
-              {REASONING_EFFORT_LEVELS.map((level) => (
-                <option key={level.value} value={level.value}>
-                  Reasoning: {level.label}
-                </option>
-              ))}
-            </Select>
+            {supportsReasoning && (
+              <Select
+                value={reasoningEffort}
+                onChange={(_, data) => setReasoningEffort(data.value)}
+                size="small"
+              >
+                {REASONING_EFFORT_LEVELS.map((level) => (
+                  <option key={level.value} value={level.value}>
+                    Reasoning: {level.label}
+                  </option>
+                ))}
+              </Select>
+            )}
           </div>
           <div className="composer-row">
             <div className="composer-input">

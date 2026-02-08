@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { invoke, setStreamHandlers } from './services/bridge'
-import type { Conversation, Message, McpServer, McpTool, ToolCallDetail, TokenUsage } from './types'
+import type { Conversation, Message, McpServer, McpTool, ToolCallDetail, TokenUsage, ModelDefinition } from './types'
 
 interface AppState {
   // Conversations
@@ -18,9 +18,10 @@ interface AppState {
 
   // MCP
   mcpServers: McpServer[]
-  
+
   // Settings
   hasApiKey: boolean
+  availableModels: ModelDefinition[]
 
   // Actions
   loadConversations: () => Promise<void>
@@ -28,11 +29,11 @@ interface AppState {
   deleteConversation: (id: string) => Promise<void>
   renameConversation: (id: string, title: string) => Promise<void>
   selectConversation: (id: string | null) => Promise<void>
-  
+
   loadMessages: (conversationId: string) => Promise<void>
   sendMessage: (content: string, model: string, reasoningEffort: string) => Promise<void>
   stopStream: () => Promise<void>
-  
+
   // Streaming handlers
   handleStreamStart: (messageId: string) => void
   handleStreamDelta: (messageId: string, delta: string) => void
@@ -40,7 +41,7 @@ interface AppState {
   handleStreamReasoning: (messageId: string, delta: string) => void
   handleStreamToolCallStart: (messageId: string, toolName: string, args: string) => void
   handleStreamToolCallResult: (messageId: string, toolName: string, result: string, success: boolean) => void
-  
+
   loadMcpServers: () => Promise<void>
   addMcpServer: (config: Partial<McpServer>) => Promise<void>
   removeMcpServer: (id: string) => Promise<void>
@@ -49,11 +50,12 @@ interface AppState {
   getMcpLogs: (id: string) => Promise<string[]>
   getMcpTools: (id: string) => Promise<McpTool[]>
   callMcpTool: (serverId: string, toolName: string, args: Record<string, unknown>) => Promise<unknown>
-  
+
   checkApiKey: () => Promise<void>
   setApiKey: (key: string) => Promise<void>
   clearApiKey: () => Promise<void>
-  testOpenAI: () => Promise<boolean>
+  testOpenRouter: () => Promise<boolean>
+  loadModels: () => Promise<void>
 }
 
 export const useStore = create<AppState>((set, get) => ({
@@ -68,6 +70,7 @@ export const useStore = create<AppState>((set, get) => ({
   _streamingMsgId: null,
   mcpServers: [],
   hasApiKey: false,
+  availableModels: [],
 
   loadConversations: async () => {
     try {
@@ -92,12 +95,12 @@ export const useStore = create<AppState>((set, get) => ({
     await invoke('conversations.delete', { id })
     set((state) => {
       const conversations = state.conversations.filter((c) => c.id !== id)
-      const currentConversationId = state.currentConversationId === id 
-        ? (conversations[0]?.id ?? null) 
+      const currentConversationId = state.currentConversationId === id
+        ? (conversations[0]?.id ?? null)
         : state.currentConversationId
       return { conversations, currentConversationId }
     })
-    
+
     const { currentConversationId } = get()
     if (currentConversationId) {
       await get().loadMessages(currentConversationId)
@@ -135,7 +138,7 @@ export const useStore = create<AppState>((set, get) => ({
 
   sendMessage: async (content, model, reasoningEffort) => {
     let { currentConversationId } = get()
-    
+
     if (!currentConversationId) {
       const conv = await get().createConversation()
       currentConversationId = conv.id
@@ -150,7 +153,7 @@ export const useStore = create<AppState>((set, get) => ({
       model,
       createdAt: new Date().toISOString()
     }
-    
+
     // Add placeholder assistant message that streaming will fill
     const tempAssistantMsg: Message = {
       id: `temp-assistant-${Date.now()}`,
@@ -165,15 +168,15 @@ export const useStore = create<AppState>((set, get) => ({
       messages: [...state.messages, tempUserMsg, tempAssistantMsg],
       isStreaming: true
     }))
-    
+
     try {
       const result = await invoke<{ userMessage: Message; assistantMessage: Message }>(
         'messages.send',
         { conversationId: currentConversationId, content, model, reasoningEffort }
       )
-      
+
       const realAssistantId = result.assistantMessage.id?.toString()
-      
+
       // Replace temp messages with real ones (with correct IDs from backend)
       // Preserve reasoning and toolCalls accumulated during streaming
       set((state) => ({
@@ -277,8 +280,17 @@ export const useStore = create<AppState>((set, get) => ({
     set({ hasApiKey: false })
   },
 
-  testOpenAI: async () => {
-    return await invoke<boolean>('settings.testOpenAI')
+  testOpenRouter: async () => {
+    return await invoke<boolean>('settings.testOpenRouter')
+  },
+
+  loadModels: async () => {
+    try {
+      const models = await invoke<ModelDefinition[]>('models.list')
+      set({ availableModels: models })
+    } catch (err) {
+      console.error('Failed to load models:', err)
+    }
   },
 
   // Streaming handlers
