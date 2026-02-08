@@ -9,13 +9,19 @@ using ChloyeDesktop.Models;
 
 namespace ChloyeDesktop.Services;
 
+/// <summary>
+/// Chat service that integrates with OpenRouter API.
+/// OpenRouter provides a unified API to access 500+ AI models from 60+ providers.
+/// API Reference: https://openrouter.ai/docs/api-reference/overview
+/// </summary>
 public class ChatService
 {
     private readonly ILogger<ChatService> _logger;
     private readonly SecretsService _secrets;
     private readonly HttpClient _httpClient;
 
-    // OpenRouter API endpoint
+    // OpenRouter Chat Completions endpoint
+    // Docs: https://openrouter.ai/docs/api-reference/overview
     private const string OpenRouterBaseUrl = "https://openrouter.ai/api/v1/chat/completions";
 
     public ChatService(ILogger<ChatService> logger, SecretsService secrets)
@@ -24,7 +30,7 @@ public class ChatService
         _secrets = secrets;
         _httpClient = new HttpClient
         {
-            Timeout = TimeSpan.FromMinutes(10)
+            Timeout = TimeSpan.FromMinutes(10) // Long timeout for reasoning models
         };
     }
 
@@ -33,6 +39,14 @@ public class ChatService
     /// </summary>
     public static ModelDefinition[] GetAvailableModels() => ModelCatalog.AvailableModels;
 
+    /// <summary>
+    /// Stream a chat completion from OpenRouter.
+    /// Supports any model available on OpenRouter including:
+    /// - OpenAI (GPT-5.x series)
+    /// - Anthropic (Claude 4.x series)
+    /// - Google (Gemini 2.5/3 series)
+    /// - DeepSeek, xAI, Meta, Mistral, Qwen, etc.
+    /// </summary>
     public async IAsyncEnumerable<StreamChunk> StreamCompletionAsync(
         ChatRequest request,
         [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
@@ -44,27 +58,39 @@ public class ChatService
         }
 
         var httpRequest = new HttpRequestMessage(HttpMethod.Post, OpenRouterBaseUrl);
+        
+        // Required: Bearer token authentication
         httpRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
+        
+        // Optional but recommended: Identify your app for rankings on openrouter.ai
         httpRequest.Headers.Add("HTTP-Referer", "https://jarvis-desktop.local");
         httpRequest.Headers.Add("X-Title", "Jarvis Desktop");
 
-        // Build messages array for Chat Completions API
+        // Build messages array following OpenAI Chat API format
+        // OpenRouter normalizes this across all providers
         var messages = request.Messages.Select(m => new Dictionary<string, object>
         { 
-            ["role"] = m.Role == "system" ? "system" : (m.Role == "user" ? "user" : "assistant"),
+            ["role"] = m.Role,  // "system", "user", "assistant", or "tool"
             ["content"] = m.Content 
         }).ToList();
 
-        // Build a clean, minimal request body for OpenRouter
-        // OpenRouter handles provider-specific parameters internally
+        // Build request body per OpenRouter API spec
+        // Docs: https://openrouter.ai/docs/api-reference/overview
         var bodyObj = new Dictionary<string, object>
         {
+            // Required: Model ID in format "provider/model-name"
+            // e.g., "openai/gpt-5-mini", "anthropic/claude-opus-4.6", "google/gemini-2.5-flash"
             ["model"] = request.Model,
+            
+            // Required: Messages array
             ["messages"] = messages,
+            
+            // Enable streaming for real-time response
             ["stream"] = true
         };
 
-        // Add tools if available
+        // Add tools if available (OpenRouter supports tool calling for compatible models)
+        // Docs: https://openrouter.ai/docs/guides/features/tool-calling
         if (request.Tools != null && request.Tools.Count > 0)
         {
             bodyObj["tools"] = request.Tools;
@@ -78,7 +104,7 @@ public class ChatService
         };
 
         var jsonBody = JsonSerializer.Serialize(bodyObj, jsonOptions);
-        _logger.LogInformation("Sending request to OpenRouter: model={Model}", request.Model);
+        _logger.LogInformation("OpenRouter request: model={Model}", request.Model);
         _logger.LogDebug("Request body: {Body}", jsonBody);
 
         httpRequest.Content = new StringContent(jsonBody, Encoding.UTF8, "application/json");
@@ -98,7 +124,7 @@ public class ChatService
         using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
         using var reader = new StreamReader(stream);
 
-        // Track function call state for aggregation
+        // Track function call state for aggregation (tool calls come in chunks)
         string? currentToolCallId = null;
         string? currentToolName = null;
         var currentToolArgs = new StringBuilder();
@@ -106,11 +132,20 @@ public class ChatService
         while (!reader.EndOfStream && !cancellationToken.IsCancellationRequested)
         {
             var line = await reader.ReadLineAsync(cancellationToken).ConfigureAwait(false);
+            
+            // Skip empty lines
             if (string.IsNullOrEmpty(line)) continue;
+            
+            // Skip SSE comments (OpenRouter sends these to prevent timeouts)
+            // Per SSE spec, lines starting with ":" are comments
+            if (line.StartsWith(":")) continue;
+            
+            // SSE data lines start with "data: "
             if (!line.StartsWith("data: ")) continue;
 
-            var data = line[6..];
+            var data = line[6..]; // Remove "data: " prefix
             
+            // "[DONE]" signals end of stream
             if (data == "[DONE]")
             {
                 yield return new StreamChunk { Done = true };
@@ -124,31 +159,49 @@ public class ChatService
             }
             catch (Exception ex)
             {
-                _logger.LogDebug("Failed to parse stream event: {Error}", ex.Message);
+                _logger.LogDebug("Failed to parse stream event: {Error}, Data: {Data}", ex.Message, data);
                 continue;
             }
 
             if (parsed?.Choices == null || parsed.Choices.Count == 0)
+            {
+                // Final chunk with just usage stats (no choices)
+                if (parsed?.Usage != null)
+                {
+                    yield return new StreamChunk
+                    {
+                        Done = true,
+                        Usage = new TokenUsage
+                        {
+                            InputTokens = parsed.Usage.PromptTokens,
+                            OutputTokens = parsed.Usage.CompletionTokens,
+                            TotalTokens = parsed.Usage.TotalTokens,
+                            ReasoningTokens = parsed.Usage.CompletionTokensDetails?.ReasoningTokens ?? 0
+                        }
+                    };
+                }
                 continue;
+            }
 
             var choice = parsed.Choices[0];
             var delta = choice.Delta;
 
             if (delta == null) continue;
 
-            // Handle content delta
+            // Handle content delta (main response text)
             if (!string.IsNullOrEmpty(delta.Content))
             {
                 yield return new StreamChunk { Content = delta.Content };
             }
 
-            // Handle reasoning/thinking content (some models return this separately)
+            // Handle reasoning/thinking content
+            // Some models (o1, o3, Gemini thinking, etc.) return reasoning separately
             if (!string.IsNullOrEmpty(delta.Reasoning))
             {
                 yield return new StreamChunk { Reasoning = delta.Reasoning };
             }
 
-            // Handle tool calls
+            // Handle tool calls (streamed in chunks)
             if (delta.ToolCalls != null && delta.ToolCalls.Count > 0)
             {
                 foreach (var toolCall in delta.ToolCalls)
@@ -170,6 +223,7 @@ public class ChatService
             }
 
             // Check for finish reason
+            // OpenRouter normalizes to: tool_calls, stop, length, content_filter, error
             if (choice.FinishReason == "tool_calls" && !string.IsNullOrEmpty(currentToolName))
             {
                 _logger.LogInformation("Tool call complete: {ToolName}", currentToolName);
@@ -189,7 +243,7 @@ public class ChatService
 
             if (choice.FinishReason == "stop")
             {
-                // Extract usage if available
+                // Extract usage if available in this chunk
                 TokenUsage? usage = null;
                 if (parsed.Usage != null)
                 {
@@ -197,7 +251,8 @@ public class ChatService
                     {
                         InputTokens = parsed.Usage.PromptTokens,
                         OutputTokens = parsed.Usage.CompletionTokens,
-                        TotalTokens = parsed.Usage.TotalTokens
+                        TotalTokens = parsed.Usage.TotalTokens,
+                        ReasoningTokens = parsed.Usage.CompletionTokensDetails?.ReasoningTokens ?? 0
                     };
                 }
                 yield return new StreamChunk { Done = true, Usage = usage };
@@ -206,6 +261,9 @@ public class ChatService
         }
     }
 
+    /// <summary>
+    /// Test connection to OpenRouter by calling the models endpoint
+    /// </summary>
     public async Task<bool> TestConnectionAsync()
     {
         var apiKey = _secrets.GetSecret("OpenRouter");
@@ -216,7 +274,6 @@ public class ChatService
 
         try
         {
-            // Test by calling the models endpoint
             var request = new HttpRequestMessage(HttpMethod.Get, "https://openrouter.ai/api/v1/models");
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
             request.Headers.Add("HTTP-Referer", "https://jarvis-desktop.local");
@@ -232,26 +289,58 @@ public class ChatService
     }
 }
 
+/// <summary>
+/// Request for chat completion
+/// </summary>
 public class ChatRequest
 {
-    public string Model { get; set; } = "openai/gpt-4o-mini";
+    /// <summary>
+    /// Model ID in OpenRouter format: "provider/model-name"
+    /// Examples: "openai/gpt-5-mini", "anthropic/claude-opus-4.6", "google/gemini-2.5-flash"
+    /// </summary>
+    public string Model { get; set; } = "openai/gpt-5-mini";
+    
+    /// <summary>
+    /// Conversation messages
+    /// </summary>
     public List<ChatMessage> Messages { get; set; } = new();
     
     /// <summary>
     /// Tool definitions in OpenAI function format
+    /// OpenRouter transforms these for non-OpenAI providers
     /// </summary>
     public List<object>? Tools { get; set; }
 }
 
+/// <summary>
+/// A message in the conversation
+/// </summary>
 public class ChatMessage
 {
+    /// <summary>
+    /// Role: "system", "user", "assistant", or "tool"
+    /// </summary>
     public string Role { get; set; } = string.Empty;
+    
+    /// <summary>
+    /// Message content
+    /// </summary>
     public string Content { get; set; } = string.Empty;
 }
 
+/// <summary>
+/// A chunk of streamed response data
+/// </summary>
 public class StreamChunk
 {
+    /// <summary>
+    /// Text content delta
+    /// </summary>
     public string? Content { get; set; }
+    
+    /// <summary>
+    /// True when stream is complete
+    /// </summary>
     public bool Done { get; set; }
     
     /// <summary>
@@ -260,12 +349,12 @@ public class StreamChunk
     public ToolCallInfo? ToolCall { get; set; }
     
     /// <summary>
-    /// Reasoning/thinking text delta from the model
+    /// Reasoning/thinking text delta (for reasoning models)
     /// </summary>
     public string? Reasoning { get; set; }
     
     /// <summary>
-    /// Token usage info from the completed response
+    /// Token usage info (included in final chunk)
     /// </summary>
     public TokenUsage? Usage { get; set; }
 }
@@ -291,7 +380,12 @@ public class ToolCallInfo
     public string Arguments { get; set; } = "{}";
 }
 
-// OpenRouter/OpenAI Chat Completions stream event models
+// ============================================================
+// OpenRouter SSE Stream Event Models
+// Based on OpenAI Chat API format (OpenRouter normalizes all providers to this)
+// Docs: https://openrouter.ai/docs/api-reference/overview
+// ============================================================
+
 internal class ChatCompletionStreamEvent
 {
     [JsonPropertyName("id")]
@@ -302,6 +396,9 @@ internal class ChatCompletionStreamEvent
 
     [JsonPropertyName("usage")]
     public UsageInfo? Usage { get; set; }
+    
+    [JsonPropertyName("model")]
+    public string? Model { get; set; }
 }
 
 internal class StreamChoice
@@ -312,8 +409,17 @@ internal class StreamChoice
     [JsonPropertyName("delta")]
     public StreamDelta? Delta { get; set; }
 
+    /// <summary>
+    /// Normalized finish reason: tool_calls, stop, length, content_filter, error
+    /// </summary>
     [JsonPropertyName("finish_reason")]
     public string? FinishReason { get; set; }
+    
+    /// <summary>
+    /// Raw finish reason from the provider
+    /// </summary>
+    [JsonPropertyName("native_finish_reason")]
+    public string? NativeFinishReason { get; set; }
 }
 
 internal class StreamDelta
@@ -324,6 +430,9 @@ internal class StreamDelta
     [JsonPropertyName("content")]
     public string? Content { get; set; }
 
+    /// <summary>
+    /// Reasoning/thinking content (for reasoning-capable models)
+    /// </summary>
     [JsonPropertyName("reasoning")]
     public string? Reasoning { get; set; }
 
@@ -365,4 +474,19 @@ internal class UsageInfo
 
     [JsonPropertyName("total_tokens")]
     public int TotalTokens { get; set; }
+    
+    /// <summary>
+    /// Detailed breakdown of completion tokens
+    /// </summary>
+    [JsonPropertyName("completion_tokens_details")]
+    public CompletionTokensDetails? CompletionTokensDetails { get; set; }
+}
+
+internal class CompletionTokensDetails
+{
+    /// <summary>
+    /// Tokens used for reasoning/thinking (o1, o3, Gemini thinking, etc.)
+    /// </summary>
+    [JsonPropertyName("reasoning_tokens")]
+    public int ReasoningTokens { get; set; }
 }

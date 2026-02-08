@@ -120,7 +120,7 @@ public class BridgeHandler
     {
         var conversationId = Guid.Parse(parameters?.GetProperty("conversationId").GetString()!);
         var content = parameters?.GetProperty("content").GetString()!;
-        var model = parameters?.GetProperty("model").GetString() ?? "openai/gpt-4o-mini";
+        var model = parameters?.GetProperty("model").GetString() ?? "openai/gpt-5-mini";
 
         // Save user message
         var userMessage = _conversations.AddMessage(conversationId, "user", content, model);
