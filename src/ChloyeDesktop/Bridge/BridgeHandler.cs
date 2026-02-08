@@ -183,6 +183,7 @@ public class BridgeHandler
 
             // Accumulate token usage across tool-call loop iterations
             int usageInput = 0, usageOutput = 0, usageReasoning = 0, usageTotal = 0;
+            decimal usageCost = 0;
 
             while (toolCallCount < maxToolCalls)
             {
@@ -199,6 +200,7 @@ public class BridgeHandler
                             usageOutput += chunk.Usage.OutputTokens;
                             usageReasoning += chunk.Usage.ReasoningTokens;
                             usageTotal += chunk.Usage.TotalTokens;
+                            usageCost += chunk.Usage.Cost;
                         }
                         break;
                     }
@@ -330,7 +332,8 @@ public class BridgeHandler
                     inputTokens = usageInput,
                     outputTokens = usageOutput,
                     reasoningTokens = usageReasoning,
-                    totalTokens = usageTotal
+                    totalTokens = usageTotal,
+                    cost = usageCost
                 } : null
             });
         }
