@@ -244,7 +244,6 @@ public class ChatService
 
             if (choice.FinishReason == "stop")
             {
-                // Extract usage if available in this chunk
                 TokenUsage? usage = null;
                 if (parsed.Usage != null)
                 {
@@ -256,9 +255,14 @@ public class ChatService
                         ReasoningTokens = parsed.Usage.CompletionTokensDetails?.ReasoningTokens ?? 0,
                         Cost = parsed.Usage.Cost ?? 0
                     };
+                    // If usage is present, we can signal done
+                    yield return new StreamChunk { Done = true, Usage = usage };
+                    yield break;
                 }
-                yield return new StreamChunk { Done = true, Usage = usage };
-                yield break;
+                
+                // If stop reason is present but no usage, continue loop to wait for usage chunk or [DONE]
+                // Do NOT yield Done=true here, otherwise we miss the subsequent usage chunk!
+                continue;
             }
         }
     }

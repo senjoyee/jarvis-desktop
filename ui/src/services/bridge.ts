@@ -51,20 +51,20 @@ function initBridge() {
       console.log('[Bridge] Raw message received:', e.data?.substring(0, 200))
       try {
         const message = JSON.parse(e.data)
-        
+
         // Check if it's a stream event
         if (message.type?.startsWith('stream.')) {
           console.log('[Bridge] Stream event detected:', message.type)
           handleStreamEvent(message)
           return
         }
-        
+
         // Otherwise it's a response to a request
         const response: BridgeResponse = message
         if (response.id && pendingRequests.has(response.id)) {
           const { resolve, reject } = pendingRequests.get(response.id)!
           pendingRequests.delete(response.id)
-          
+
           if (response.error) {
             reject(new Error(response.error.message))
           } else {
@@ -90,6 +90,7 @@ function handleStreamEvent(event: { type: string; data: Record<string, unknown> 
       onStreamDelta?.(event.data as { messageId: string; delta?: string })
       break
     case 'stream.done':
+      console.log('[Bridge] stream.done received with data:', JSON.stringify(event.data))
       onStreamDone?.(event.data as { messageId: string; usage?: TokenUsage })
       break
     case 'stream.reasoning':

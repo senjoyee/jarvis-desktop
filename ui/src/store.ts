@@ -329,9 +329,11 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   handleStreamDone: (_messageId, usage) => {
+    console.log('[Store] handleStreamDone called, messageId:', _messageId, 'usage:', usage)
     if (usage) {
       set((state) => {
         const msgIndex = state.messages.findIndex((m) => m.id === _messageId)
+        console.log('[Store] Updating message at index:', msgIndex, 'with tokenUsage:', usage)
         if (msgIndex === -1) return state
         const newMessages = [...state.messages]
         newMessages[msgIndex] = { ...newMessages[msgIndex], tokenUsage: usage }
