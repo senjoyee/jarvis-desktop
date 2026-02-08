@@ -225,6 +225,24 @@ public class ChatService
 
             // Check for finish reason
             // OpenRouter normalizes to: tool_calls, stop, length, content_filter, error
+            // 4. Check for Usage info attached to this choice/chunk
+            // This ensures we capture usage even if it comes with content or without a specific finish_reason
+            if (parsed.Usage != null)
+            {
+                var usage = new TokenUsage
+                {
+                    InputTokens = parsed.Usage.PromptTokens,
+                    OutputTokens = parsed.Usage.CompletionTokens,
+                    TotalTokens = parsed.Usage.TotalTokens,
+                    ReasoningTokens = parsed.Usage.CompletionTokensDetails?.ReasoningTokens ?? 0,
+                    Cost = parsed.Usage.Cost ?? 0
+                };
+                yield return new StreamChunk { Done = true, Usage = usage };
+                yield break;
+            }
+
+            // Check for finish reason
+            // OpenRouter normalizes to: tool_calls, stop, length, content_filter, error
             if (choice.FinishReason == "tool_calls" && !string.IsNullOrEmpty(currentToolName))
             {
                 _logger.LogInformation("Tool call complete: {ToolName}", currentToolName);
@@ -242,28 +260,8 @@ public class ChatService
                 currentToolArgs.Clear();
             }
 
-            if (choice.FinishReason == "stop")
-            {
-                TokenUsage? usage = null;
-                if (parsed.Usage != null)
-                {
-                    usage = new TokenUsage
-                    {
-                        InputTokens = parsed.Usage.PromptTokens,
-                        OutputTokens = parsed.Usage.CompletionTokens,
-                        TotalTokens = parsed.Usage.TotalTokens,
-                        ReasoningTokens = parsed.Usage.CompletionTokensDetails?.ReasoningTokens ?? 0,
-                        Cost = parsed.Usage.Cost ?? 0
-                    };
-                    // If usage is present, we can signal done
-                    yield return new StreamChunk { Done = true, Usage = usage };
-                    yield break;
-                }
-                
-                // If stop reason is present but no usage, continue loop to wait for usage chunk or [DONE]
-                // Do NOT yield Done=true here, otherwise we miss the subsequent usage chunk!
-                continue;
-            }
+            // We explicitly ignore 'stop' finish reason here if usage is null.
+            // We wait for the explicit usage chunk or [DONE] signal to terminate the stream.
         }
     }
 
