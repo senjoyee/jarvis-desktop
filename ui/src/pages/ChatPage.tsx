@@ -214,7 +214,7 @@ export default function ChatPage() {
   // -- VIEWS --
 
   // 1. Empty State (Centered)
-  if (!currentConversationId && messages.length === 0) {
+  if (messages.length === 0) {
     return (
       <div className="chat-container centered-view">
         <div className="centered-content">
