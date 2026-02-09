@@ -19,8 +19,7 @@ import {
   StarFilled,
   EditRegular,
   DeleteRegular,
-  FolderAddRegular,
-  MoreHorizontalRegular
+  FolderAddRegular
 } from '@fluentui/react-icons'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'

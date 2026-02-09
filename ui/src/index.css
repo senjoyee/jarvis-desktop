@@ -846,3 +846,158 @@ body {
   display: flex !important;
 }
 
+
+/* Typography Overhaul - Claude Vibes */
+:root {
+  --font-base: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-serif: 'Source Serif 4', serif;
+  --font-display: 'Frank Ruhl Libre', 'Source Serif 4', serif;
+  
+  --bg-primary: #17181c; /* Slightly warmer dark background */
+  --bg-secondary: #212226;
+  --text-primary: #e6e6e6;
+  --text-secondary: #9da3ae;
+}
+
+body {
+  font-family: var(--font-base);
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  letter-spacing: -0.01em; /* Modern tightness */
+}
+
+/* Chat Headers & Display Text */
+.empty-state h2 {
+  font-family: var(--font-display);
+  font-weight: 300; /* Lighter weight for elegance */
+  font-size: 32px;
+  letter-spacing: -0.02em;
+  color: #d1d5db; /* Softer white */
+  margin-bottom: 24px;
+}
+
+/* User Messages - Sans Serif, Clean */
+.message.user .message-content {
+  font-family: var(--font-base);
+  font-size: 15px;
+  line-height: 1.5;
+  color: #fff;
+  background-color: #2b2d31; /* Subtle bubble */
+  padding: 10px 14px;
+  border-radius: 12px;
+  display: inline-block;
+}
+
+/* Assistant Messages - Serif, Editorial */
+.message.assistant .message-content {
+  font-family: var(--font-serif);
+  font-size: 17px; /* Slightly larger for reading */
+  line-height: 1.6;
+  color: #ececec;
+  font-weight: 400;
+}
+
+/* Specific overrides for Assistant Headers/Code */
+.message.assistant h1, .message.assistant h2, .message.assistant h3 {
+  font-family: var(--font-display);
+  font-weight: 500;
+  margin-top: 1.5em;
+  margin-bottom: 0.5em;
+  color: #fff;
+}
+
+/* Input Area - Sans Serif */
+.composer textarea {
+  font-family: var(--font-base);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+/* Chat Title */
+.chat-title {
+  font-family: var(--font-base); /* Keep title clean sans-serif */
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+/* Sidebar - Sans Serif */
+.sidebar {
+  font-family: var(--font-base);
+}
+
+/* Code Blocks - Monospace */
+code, pre {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 13px;
+}
+
+
+/* Typography - Precise Replication (Best Match) */
+:root {
+  /* UI: Clean sans-serif like Claude */
+  --font-base: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  
+  /* Content: Editorial serif (Newsreader is closest to Tiempos/Anthropic Serif) */
+  --font-serif: 'Newsreader', 'Times New Roman', Times, serif;
+  
+  --bg-primary: #191919; /* Slightly warmer dark mode */
+  --bg-secondary: #222222;
+  --text-primary: #ececec;
+  --text-secondary: #a1a1aa;
+}
+
+body {
+  font-family: var(--font-base);
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Headers - 'Joyee is thinking' */
+.empty-state h2 {
+  font-family: var(--font-serif);
+  font-weight: 360; /* Precision weight match */
+  font-size: 32px;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  color: #d4d4d8; /* Soft white */
+  margin-bottom: 24px;
+}
+
+/* Assistant Responses */
+.message.assistant .message-content {
+  font-family: var(--font-serif);
+  font-weight: 360; /* Precision match */
+  font-size: 17px; /* Optimal reading size */
+  line-height: 1.65; /* 26.4px / 16px approx */
+  color: #e4e4e7;
+  letter-spacing: normal;
+}
+
+/* User Messages */
+.message.user .message-content {
+  font-family: var(--font-base);
+  font-size: 15px;
+  line-height: 1.5;
+  background-color: #27272a;
+  color: #fff;
+  border-radius: 12px;
+  padding: 10px 14px;
+}
+
+/* Input Placeholder */
+.composer textarea {
+  font-family: var(--font-base);
+  font-size: 15px;
+  font-weight: 400;
+  line-height: 1.5;
+}
+
+/* Keep code blocks distinct */
+code, pre {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
