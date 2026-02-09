@@ -6,7 +6,7 @@ import {
   PlugConnectedRegular,
   AddRegular,
   DeleteRegular,
-  NavigationRegular
+  PanelLeftRegular
 } from '@fluentui/react-icons'
 import { useStore } from '../store'
 import type { Conversation } from '../types'
@@ -50,18 +50,21 @@ export default function Layout() {
     <div className="app-layout">
       <aside className={`sidebar ${collapsed ? 'collapsed' : ''}`}>
         <div className="sidebar-header">
-          <Button
-            icon={<NavigationRegular />}
-            appearance="subtle"
-            onClick={() => setCollapsed(!collapsed)}
-            title="Toggle Sidebar"
-          />
-          {!collapsed && <span style={{ fontWeight: 600, fontSize: 16 }}>Jarvis</span>}
+          <div className="sidebar-toggle-container">
+            <Button
+              icon={<PanelLeftRegular />}
+              appearance="subtle"
+              onClick={() => setCollapsed(!collapsed)}
+              title={collapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+            />
+          </div>
+          {!collapsed && <span className="app-title">Jarvis</span>}
           <Button
             icon={<AddRegular />}
             appearance="subtle"
             onClick={handleNewChat}
             title="New Chat"
+            className="new-chat-btn"
           />
         </div>
 

@@ -60,20 +60,42 @@ body {
 }
 
 .sidebar-header {
-  padding: 16px;
+  min-height: 52px;
   border-bottom: 1px solid #3c3c3c;
   display: flex;
   align-items: center;
+  transition: all 0.2s ease;
+}
+
+.sidebar:not(.collapsed) .sidebar-header {
+  padding: 16px;
+  flex-direction: row;
   justify-content: space-between;
 }
+
+.sidebar.collapsed .sidebar-header {
+  padding: 12px 0;
+  flex-direction: column;
+  gap: 12px;
+  justify-content: flex-start;
+  border-bottom: none;
+  /* Cleaner look */
+}
+
+.sidebar-toggle-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 
 .sidebar.collapsed .sidebar-header {
   padding: 16px 0;
   justify-content: center;
 }
 
-.sidebar.collapsed .sidebar-header > span,
-.sidebar.collapsed .sidebar-header > button[title="New Chat"] {
+.sidebar.collapsed .sidebar-header>span,
+.sidebar.collapsed .sidebar-header>button[title="New Chat"] {
   display: none;
 }
 
@@ -91,7 +113,7 @@ body {
   padding: 12px 0 8px;
 }
 
-.sidebar.collapsed .sidebar-section > span:first-of-type {
+.sidebar.collapsed .sidebar-section>span:first-of-type {
   display: none;
 }
 
@@ -751,6 +773,76 @@ body {
 
 /* Override Fluent UI Menu for Delete item */
 .delete-menu-item span {
-  color: #ff6b6b !important; /* Make delete red */
+  color: #ff6b6b !important;
+  /* Make delete red */
+}
+
+
+/* Refined Sidebar */
+.app-title {
+  font-weight: 600;
+  font-size: 16px;
+  margin-left: 8px;
+}
+
+.sidebar.collapsed {
+  width: 48px;
+  /* Narrower rail */
+  min-width: 48px;
+}
+
+.sidebar-header {
+  padding: 12px 0;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  height: auto;
+}
+
+.sidebar:not(.collapsed) .sidebar-header {
+  flex-direction: row;
+  padding: 16px;
+  justify-content: space-between;
+}
+
+.sidebar:not(.collapsed) .sidebar-toggle-container button {
+  /* Hide the toggle button when expanded OR we can keep it. 
+     The user screenshot shows it on top. Let's keep it visible always. */
+}
+
+/* Adjust layout when collapsed */
+.sidebar.collapsed .sidebar-header {
+  border-bottom: none;
+}
+
+.sidebar.collapsed .app-title {
+  display: none;
+}
+
+.sidebar.collapsed .new-chat-btn {
+  /* Icon only button */
+}
+
+/* Center items in collapsed sidebar */
+.sidebar.collapsed .conversation-item {
+  justify-content: center;
+  padding: 10px 0;
+}
+
+.sidebar.collapsed .sidebar-section {
+  display: none;
+  /* Hide section headers */
+}
+
+.sidebar.collapsed .server-badge {
+  display: none;
+}
+
+.sidebar.collapsed .delete-btn {
+  display: none;
+}
+/* Ensure New Chat button is visible in collapsed mode */
+.sidebar.collapsed .new-chat-btn {
+  display: flex !important;
 }
 
