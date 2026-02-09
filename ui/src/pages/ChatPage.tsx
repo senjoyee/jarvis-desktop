@@ -132,7 +132,7 @@ export default function ChatPage() {
 
   // Reuseable components
   const ModelSelector = () => (
-    <Menu>
+    <Menu positioning="below-end">
       <MenuTrigger disableButtonEnhancement>
         <Button
           appearance="subtle"
@@ -145,7 +145,7 @@ export default function ChatPage() {
         </Button>
       </MenuTrigger>
       <MenuPopover>
-        <MenuList>
+        <MenuList style={{ maxHeight: '300px', overflowY: 'auto' }}>
           {Object.entries(modelsByProvider).map(([provider, models]) => (
             <div key={provider}>
               <div style={{ padding: '8px 12px', fontSize: '12px', color: '#888', fontWeight: 600 }}>
