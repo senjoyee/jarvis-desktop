@@ -2,7 +2,6 @@ import { useState, useRef, useEffect, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
   Button,
-  Select,
   Menu,
   MenuTrigger,
   MenuList,
@@ -104,70 +103,9 @@ export default function ChatPage() {
     }
   }
 
-  // Get display name for model (strip provider prefix)
   const getModelDisplayName = (modelId: string) => {
     const model = availableModels.find(m => m.id === modelId)
     return model?.name || modelId.split('/').pop() || modelId
-  }
-
-  if (!currentConversationId && messages.length === 0) {
-    return (
-      <div className="chat-container">
-        <div className="empty-state">
-          <h2>Welcome to Jarvis</h2>
-          <p>Start a new conversation or select one from the sidebar.</p>
-          {!hasApiKey && (
-            <p style={{ marginTop: 16, color: '#ffc107' }}>
-              ⚠️ Please set your OpenRouter API key in Settings to start chatting.
-            </p>
-          )}
-        </div>
-
-        <div className="composer">
-          <div className="composer-inner">
-            <div className="model-selector">
-              <Select
-                value={selectedModel}
-                onChange={(_, data) => setSelectedModel(data.value)}
-                size="small"
-                style={{ minWidth: 200 }}
-              >
-                {Object.entries(modelsByProvider).map(([provider, models]) => (
-                  <optgroup key={provider} label={provider}>
-                    {models.map((model) => (
-                      <option key={model.id} value={model.id}>
-                        {model.name}
-                      </option>
-                    ))}
-                  </optgroup>
-                ))}
-              </Select>
-            </div>
-            <div className="composer-row">
-              <div className="composer-input">
-                <textarea
-                  ref={textareaRef}
-                  value={input}
-                  onChange={(e) => {
-                    setInput(e.target.value)
-                    adjustTextareaHeight()
-                  }}
-                  onKeyDown={handleKeyDown}
-                  placeholder="Type a message..."
-                  rows={1}
-                />
-              </div>
-              <Button
-                icon={<SendRegular />}
-                appearance="primary"
-                onClick={handleSend}
-                disabled={!input.trim() || !hasApiKey}
-              />
-            </div>
-          </div>
-        </div>
-      </div>
-    )
   }
 
   const handlePin = async () => {
@@ -192,6 +130,109 @@ export default function ChatPage() {
     }
   }
 
+  // Reuseable components
+  const ModelSelector = () => (
+    <Menu>
+      <MenuTrigger disableButtonEnhancement>
+        <Button
+          appearance="subtle"
+          className="model-selector-btn"
+          icon={<ChevronDownRegular />}
+          iconPosition="after"
+          size="small"
+        >
+          {getModelDisplayName(selectedModel)}
+        </Button>
+      </MenuTrigger>
+      <MenuPopover>
+        <MenuList>
+          {Object.entries(modelsByProvider).map(([provider, models]) => (
+            <div key={provider}>
+              <div style={{ padding: '8px 12px', fontSize: '12px', color: '#888', fontWeight: 600 }}>
+                {provider.toUpperCase()}
+              </div>
+              {models.map((model) => (
+                <MenuItem
+                  key={model.id}
+                  onClick={() => setSelectedModel(model.id)}
+                >
+                  {model.name}
+                </MenuItem>
+              ))}
+              <MenuDivider />
+            </div>
+          ))}
+        </MenuList>
+      </MenuPopover>
+    </Menu>
+  )
+
+  const ComposerBox = () => (
+    <div className="composer-box">
+      <textarea
+        ref={textareaRef}
+        className="composer-textarea"
+        value={input}
+        onChange={(e) => {
+          setInput(e.target.value)
+          adjustTextareaHeight()
+        }}
+        onKeyDown={handleKeyDown}
+        placeholder="How can I help you today?"
+        rows={1}
+        disabled={isStreaming}
+      />
+      <div className="composer-footer">
+        <div className="composer-actions-left">
+          {/* Add +, Code, etc buttons here later if needed */}
+        </div>
+        <div className="composer-controls-right">
+          <ModelSelector />
+          {isStreaming ? (
+            <Button
+              icon={<StopRegular />}
+              appearance="secondary"
+              className="send-button"
+              onClick={stopStream}
+              shape="circular"
+            />
+          ) : (
+            <Button
+              icon={<SendRegular />}
+              appearance={input.trim() ? "primary" : "subtle"}
+              className="send-button"
+              onClick={handleSend}
+              disabled={!input.trim() || !hasApiKey}
+              shape="circular"
+            />
+          )}
+        </div>
+      </div>
+    </div>
+  )
+
+  // -- VIEWS --
+
+  // 1. Empty State (Centered)
+  if (!currentConversationId && messages.length === 0) {
+    return (
+      <div className="chat-container centered-view">
+        <div className="centered-content">
+          <h2 className="greeting-title">Joyee is thinking</h2>
+          <div className="composer-wrapper centered">
+            <ComposerBox />
+          </div>
+          {!hasApiKey && (
+            <p className="api-key-warning">
+              ⚠️ Please set your OpenRouter API key in Settings to start chatting.
+            </p>
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  // 2. Active Chat State
   return (
     <div className="chat-container">
       {currentConversation && (
@@ -293,59 +334,8 @@ export default function ChatPage() {
         <div ref={messagesEndRef} />
       </div>
 
-      <div className="composer">
-        <div className="composer-inner">
-          <div className="model-selector">
-            <Select
-              value={selectedModel}
-              onChange={(_, data) => setSelectedModel(data.value)}
-              size="small"
-              style={{ minWidth: 200 }}
-            >
-              {Object.entries(modelsByProvider).map(([provider, models]) => (
-                <optgroup key={provider} label={provider}>
-                  {models.map((model) => (
-                    <option key={model.id} value={model.id}>
-                      {model.name}
-                    </option>
-                  ))}
-                </optgroup>
-              ))}
-            </Select>
-          </div>
-          <div className="composer-row">
-            <div className="composer-input">
-              <textarea
-                ref={textareaRef}
-                value={input}
-                onChange={(e) => {
-                  setInput(e.target.value)
-                  adjustTextareaHeight()
-                }}
-                onKeyDown={handleKeyDown}
-                placeholder="Type a message..."
-                rows={1}
-                disabled={isStreaming}
-              />
-            </div>
-            {isStreaming ? (
-              <Button
-                icon={<StopRegular />}
-                appearance="secondary"
-                onClick={stopStream}
-              >
-                Stop
-              </Button>
-            ) : (
-              <Button
-                icon={<SendRegular />}
-                appearance="primary"
-                onClick={handleSend}
-                disabled={!input.trim() || !hasApiKey}
-              />
-            )}
-          </div>
-        </div>
+      <div className="composer-wrapper bottom">
+        <ComposerBox />
       </div>
     </div >
   )

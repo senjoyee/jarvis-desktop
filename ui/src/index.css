@@ -1001,3 +1001,151 @@ code, pre {
   line-height: 1.5;
 }
 
+
+
+/* --- New Composer & Layout Styles (Claude Replication) --- */
+
+/* 1. View Layouts */
+.chat-container.centered-view {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  background-color: var(--bg-primary); /* Ensure consistent bg */
+}
+
+.centered-content {
+  width: 100%;
+  max-width: 750px; /* Optimal reading width */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0 20px;
+}
+
+/* 2. Typography */
+.greeting-title {
+  font-family: var(--font-display);
+  font-weight: 360;
+  font-size: 42px; /* Large and elegant */
+  color: #e8e8e8;
+  margin-bottom: 40px;
+  letter-spacing: -0.02em;
+  text-align: center;
+}
+
+/* 3. Composer (Input Box) */
+.composer-wrapper {
+  width: 100%;
+}
+
+.composer-wrapper.centered {
+  margin-bottom: 40px; /* Space for footer items if needed */
+}
+
+.composer-wrapper.bottom {
+  padding: 16px 20px 24px;
+  background-color: var(--bg-primary); /* Match bg so it blends */
+  /* Remove top border to look floating, or keep it subtle */
+  /* border-top: 1px solid #3c3c3c; */
+}
+
+/* The Box Itself */
+.composer-box {
+  background-color: #303030; /* Lighter than bg-primary */
+  border: 1px solid #424242;
+  border-radius: 16px;
+  padding: 14px 16px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: border-color 0.2s;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.composer-box:focus-within {
+  border-color: #666;
+  background-color: #333333;
+}
+
+/* Textarea */
+.composer-textarea {
+  background: transparent;
+  border: none;
+  color: #ececec;
+  font-family: var(--font-base);
+  font-size: 16px;
+  line-height: 1.5;
+  resize: none;
+  width: 100%;
+  min-height: 24px;
+  max-height: 300px;
+  padding: 0;
+}
+
+.composer-textarea:focus {
+  outline: none;
+}
+
+.composer-textarea::placeholder {
+  color: #888;
+}
+
+/* Footer (Model Selector + Buttons) */
+.composer-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  /* Add min-height to align items nicely */
+  min-height: 32px;
+}
+
+.composer-controls-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto; /* Push to right */
+}
+
+/* Model Selector Button override */
+.model-selector-btn {
+  color: #bbb !important;
+  font-weight: 500 !important;
+  font-size: 13px !important;
+  background: transparent !important;
+  border: 1px solid transparent !important;
+  border-radius: 6px !important;
+}
+
+.model-selector-btn:hover {
+  background-color: rgba(255, 255, 255, 0.08) !important;
+  color: #fff !important;
+}
+
+/* Send Button */
+.send-button {
+  width: 32px;
+  height: 32px;
+  min-width: 32px !important;
+  padding: 0 !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.send-button svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* API Warning styling */
+.api-key-warning {
+  margin-top: 16px;
+  color: #eab308;
+  font-size: 13px;
+  background: rgba(234, 179, 8, 0.1);
+  padding: 8px 12px;
+  border-radius: 6px;
+}
+
