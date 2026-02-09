@@ -14,7 +14,7 @@ body,
 
 body {
   font-family: 'Söhne', 'ui-sans-serif', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
-  background-color: #2f2f2f;
+  background-color: #212121;
   color: #ececec;
   font-size: 15px;
   line-height: 1.6;
@@ -190,7 +190,7 @@ body {
   flex: 1;
   overflow-y: auto;
   padding: 24px 20px;
-  background-color: #2f2f2f;
+  background-color: #212121;
 }
 
 .message {
@@ -275,8 +275,8 @@ body {
 
 .composer {
   padding: 16px 20px 24px;
-  border-top: 1px solid #3c3c3c;
-  background-color: #252526;
+  border-top: none;
+  background-color: #212121;
 }
 
 .composer-inner {
@@ -750,7 +750,7 @@ body {
 .chat-header {
   padding: 16px 20px;
   border-bottom: 1px solid #3c3c3c;
-  background-color: #2f2f2f;
+  background-color: #212121;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -852,8 +852,8 @@ body {
   --font-serif: 'Source Serif 4', serif;
   --font-display: 'Frank Ruhl Libre', 'Source Serif 4', serif;
 
-  --bg-primary: #17181c;
-  /* Slightly warmer dark background */
+  --bg-primary: #212121;
+  /* Unified background color */
   --bg-secondary: #212226;
   --text-primary: #e6e6e6;
   --text-secondary: #9da3ae;
@@ -949,8 +949,8 @@ pre {
   /* Content: Editorial serif (Newsreader is closest to Tiempos/Anthropic Serif) */
   --font-serif: 'Newsreader', 'Times New Roman', Times, serif;
 
-  --bg-primary: #191919;
-  /* Slightly warmer dark mode */
+  --bg-primary: #212121;
+  /* Unified background color */
   --bg-secondary: #222222;
   --text-primary: #ececec;
   --text-secondary: #a1a1aa;
@@ -1065,17 +1065,14 @@ pre {
 
 .composer-wrapper.bottom {
   padding: 16px 20px 24px;
-  background-color: var(--bg-primary);
-  /* Match bg so it blends */
-  /* Remove top border to look floating, or keep it subtle */
-  /* border-top: 1px solid #3c3c3c; */
+  background-color: #212121;
+  border-top: none;
 }
 
 /* The Box Itself */
 .composer-box {
-  background-color: #303030;
-  /* Lighter than bg-primary */
-  border: 1px solid #424242;
+  background-color: #2d2d2d;
+  border: 1px solid #444;
   border-radius: 16px;
   padding: 14px 16px 12px;
   display: flex;
@@ -1083,6 +1080,9 @@ pre {
   gap: 8px;
   transition: border-color 0.2s;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  max-width: 750px;
+  width: 100%;
+  margin: 0 auto;
 }
 
 .composer-box:focus-within {
