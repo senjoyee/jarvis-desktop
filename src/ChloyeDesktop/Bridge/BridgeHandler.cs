@@ -76,6 +76,9 @@ public class BridgeHandler
             "conversations.rename" => _conversations.RenameConversation(
                 Guid.Parse(parameters?.GetProperty("id").GetString()!),
                 parameters?.GetProperty("title").GetString()!),
+            "conversations.pin" => _conversations.TogglePinConversation(
+                Guid.Parse(parameters?.GetProperty("id").GetString()!),
+                parameters?.GetProperty("isPinned").GetBoolean() ?? false),
 
             // Messages
             "messages.list" => _conversations.GetMessages(

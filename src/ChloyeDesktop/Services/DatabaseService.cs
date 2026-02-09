@@ -70,6 +70,19 @@ public class DatabaseService : IDisposable
         cmd.ExecuteNonQuery();
 
         _logger.LogInformation("Database initialized");
+
+        // Migrations
+        using var migrationCmd = conn.CreateCommand();
+        migrationCmd.CommandText = "SELECT COUNT(*) FROM pragma_table_info('conversations') WHERE name='is_pinned';";
+        var hasPinnedCol = (long)(migrationCmd.ExecuteScalar() ?? 0L) > 0;
+        
+        if (!hasPinnedCol)
+        {
+            var addColCmd = conn.CreateCommand();
+            addColCmd.CommandText = "ALTER TABLE conversations ADD COLUMN is_pinned INTEGER DEFAULT 0;";
+            addColCmd.ExecuteNonQuery();
+            _logger.LogInformation("Added is_pinned column to conversations table");
+        }
     }
 
     public SqliteConnection GetConnection()

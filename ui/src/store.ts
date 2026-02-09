@@ -120,8 +120,7 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   togglePinConversation: async (id, isPinned) => {
-    // Backend doesn't support this yet, so we just update local state
-    // await invoke('conversations.pin', { id, isPinned }) 
+    await invoke('conversations.pin', { id, isPinned })
     set((state) => ({
       conversations: state.conversations.map((c) =>
         c.id === id ? { ...c, isPinned } : c
