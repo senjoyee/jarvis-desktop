@@ -725,3 +725,32 @@ body {
   padding-left: 8px;
   border-left: 1px solid rgba(255, 255, 255, 0.1);
 }
+
+/* Chat Header */
+.chat-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid #3c3c3c;
+  background-color: #2f2f2f;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.chat-title-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.chat-title {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0;
+  color: #ececec;
+}
+
+/* Override Fluent UI Menu for Delete item */
+.delete-menu-item span {
+  color: #ff6b6b !important; /* Make delete red */
+}
+

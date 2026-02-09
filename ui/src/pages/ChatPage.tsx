@@ -1,7 +1,27 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
-import { useParams } from 'react-router-dom'
-import { Button, Select } from '@fluentui/react-components'
-import { SendRegular, StopRegular, ChevronDownRegular, ChevronRightRegular } from '@fluentui/react-icons'
+import { useParams, useNavigate } from 'react-router-dom'
+import {
+  Button,
+  Select,
+  Menu,
+  MenuTrigger,
+  MenuList,
+  MenuItem,
+  MenuPopover,
+  MenuDivider
+} from '@fluentui/react-components'
+import {
+  SendRegular,
+  StopRegular,
+  ChevronDownRegular,
+  ChevronRightRegular,
+  StarRegular,
+  StarFilled,
+  EditRegular,
+  DeleteRegular,
+  FolderAddRegular,
+  MoreHorizontalRegular
+} from '@fluentui/react-icons'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
@@ -12,12 +32,14 @@ import type { ToolCallDetail, TokenUsage } from '../types'
 
 export default function ChatPage() {
   const { conversationId } = useParams()
+  const navigate = useNavigate()
   const [input, setInput] = useState('')
   const [selectedModel, setSelectedModel] = useState('openai/gpt-5-mini')
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   const messages = useStore((state) => state.messages)
+  const conversations = useStore((state) => state.conversations)
   const isStreaming = useStore((state) => state.isStreaming)
   const streamingMessageId = useStore((state) => state.streamingMessageId)
   const currentConversationId = useStore((state) => state.currentConversationId)
@@ -28,6 +50,11 @@ export default function ChatPage() {
   const checkApiKey = useStore((state) => state.checkApiKey)
   const availableModels = useStore((state) => state.availableModels)
   const loadModels = useStore((state) => state.loadModels)
+  const togglePinConversation = useStore((state) => state.togglePinConversation)
+  const renameConversation = useStore((state) => state.renameConversation)
+  const deleteConversation = useStore((state) => state.deleteConversation)
+
+  const currentConversation = conversations.find(c => c.id === currentConversationId)
 
   // Group models by provider for the dropdown
   const modelsByProvider = useMemo(() => {
@@ -144,8 +171,66 @@ export default function ChatPage() {
     )
   }
 
+  const handlePin = async () => {
+    if (currentConversation) {
+      await togglePinConversation(currentConversation.id, !currentConversation.isPinned)
+    }
+  }
+
+  const handleRename = async () => {
+    if (currentConversation) {
+      const newTitle = window.prompt("Rename conversation:", currentConversation.title)
+      if (newTitle && newTitle.trim()) {
+        await renameConversation(currentConversation.id, newTitle.trim())
+      }
+    }
+  }
+
+  const handleDelete = async () => {
+    if (currentConversation && window.confirm("Are you sure you want to delete this conversation?")) {
+      await deleteConversation(currentConversation.id)
+      navigate('/')
+    }
+  }
+
   return (
     <div className="chat-container">
+      {currentConversation && (
+        <div className="chat-header">
+          <div className="chat-title-group">
+            <h2 className="chat-title">{currentConversation.title}</h2>
+            <Menu>
+              <MenuTrigger disableButtonEnhancement>
+                <Button appearance="subtle" icon={<ChevronDownRegular />} size="small" />
+              </MenuTrigger>
+              <MenuPopover className="chat-menu-popover">
+                <MenuList>
+                  <MenuItem
+                    icon={currentConversation.isPinned ? <StarFilled /> : <StarRegular />}
+                    onClick={handlePin}
+                  >
+                    {currentConversation.isPinned ? "Unstar" : "Star"}
+                  </MenuItem>
+                  <MenuItem icon={<EditRegular />} onClick={handleRename}>
+                    Rename
+                  </MenuItem>
+                  <MenuItem icon={<FolderAddRegular />} disabled>
+                    Add to project
+                  </MenuItem>
+                  <MenuDivider />
+                  <MenuItem
+                    icon={<DeleteRegular />}
+                    className="delete-menu-item"
+                    onClick={handleDelete}
+                  >
+                    Delete
+                  </MenuItem>
+                </MenuList>
+              </MenuPopover>
+            </Menu>
+          </div>
+        </div>
+      )}
       <div className="messages-area">
         {messages.map((message) => (
           <div key={message.id} className={`message ${message.role}`}>

@@ -28,6 +28,7 @@ interface AppState {
   createConversation: (title?: string) => Promise<Conversation>
   deleteConversation: (id: string) => Promise<void>
   renameConversation: (id: string, title: string) => Promise<void>
+  togglePinConversation: (id: string, isPinned: boolean) => Promise<void>
   selectConversation: (id: string | null) => Promise<void>
 
   loadMessages: (conversationId: string) => Promise<void>
@@ -117,6 +118,17 @@ export const useStore = create<AppState>((set, get) => ({
       )
     }))
   },
+
+  togglePinConversation: async (id, isPinned) => {
+    // Backend doesn't support this yet, so we just update local state
+    // await invoke('conversations.pin', { id, isPinned }) 
+    set((state) => ({
+      conversations: state.conversations.map((c) =>
+        c.id === id ? { ...c, isPinned } : c
+      )
+    }))
+  },
+
 
   selectConversation: async (id) => {
     set({ currentConversationId: id, messages: [] })

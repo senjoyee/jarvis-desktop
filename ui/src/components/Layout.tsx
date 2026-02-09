@@ -41,6 +41,11 @@ export default function Layout() {
 
   const connectedServers = mcpServers.filter(s => s.status === 'connected').length
 
+  const sortedConversations = [...conversations].sort((a, b) => {
+    if (a.isPinned === b.isPinned) return 0
+    return a.isPinned ? -1 : 1
+  })
+
   return (
     <div className="app-layout">
       <aside className={`sidebar ${collapsed ? 'collapsed' : ''}`}>
@@ -63,7 +68,7 @@ export default function Layout() {
         <div className="sidebar-content">
           <div className="sidebar-section">Conversations</div>
           <ul className="conversation-list">
-            {conversations.map((conv) => (
+            {sortedConversations.map((conv) => (
               <li
                 key={conv.id}
                 className={`conversation-item ${currentConversationId === conv.id ? 'active' : ''}`}
@@ -71,7 +76,10 @@ export default function Layout() {
                 title={collapsed ? conv.title : undefined}
               >
                 <ChatRegular />
-                <span className="conversation-title">{conv.title}</span>
+                <span className="conversation-title">
+                  {conv.title}
+                  {conv.isPinned && <span style={{ marginLeft: 6, fontSize: 10 }}>⭐</span>}
+                </span>
                 <Button
                   className="delete-btn"
                   icon={<DeleteRegular />}

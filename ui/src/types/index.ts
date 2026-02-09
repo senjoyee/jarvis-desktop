@@ -3,6 +3,7 @@ export interface Conversation {
   title: string
   createdAt: string
   updatedAt: string
+  isPinned?: boolean
 }
 
 export interface ToolCallDetail {
