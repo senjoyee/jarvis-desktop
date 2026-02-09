@@ -7,7 +7,14 @@ import {
   MenuList,
   MenuItem,
   MenuPopover,
-  MenuDivider
+  MenuDivider,
+  Dialog,
+  DialogSurface,
+  DialogTitle,
+  DialogBody,
+  DialogActions,
+  DialogContent,
+  Input,
 } from '@fluentui/react-components'
 import {
   SendRegular,
@@ -108,24 +115,40 @@ export default function ChatPage() {
     return model?.name || modelId.split('/').pop() || modelId
   }
 
+  const [isRenameDialogOpen, setIsRenameDialogOpen] = useState(false)
+  const [renameInput, setRenameInput] = useState('')
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+
   const handlePin = async () => {
     if (currentConversation) {
       await togglePinConversation(currentConversation.id, !currentConversation.isPinned)
     }
   }
 
-  const handleRename = async () => {
+  const handleRenameClick = () => {
     if (currentConversation) {
-      const newTitle = window.prompt("Rename conversation:", currentConversation.title)
-      if (newTitle && newTitle.trim()) {
-        await renameConversation(currentConversation.id, newTitle.trim())
-      }
+      setRenameInput(currentConversation.title)
+      setIsRenameDialogOpen(true)
     }
   }
 
-  const handleDelete = async () => {
-    if (currentConversation && window.confirm("Are you sure you want to delete this conversation?")) {
+  const onRenameSubmit = async () => {
+    if (currentConversation && renameInput.trim()) {
+      await renameConversation(currentConversation.id, renameInput.trim())
+      setIsRenameDialogOpen(false)
+    }
+  }
+
+  const handleDeleteClick = () => {
+    if (currentConversation) {
+      setIsDeleteDialogOpen(true)
+    }
+  }
+
+  const onDeleteConfirm = async () => {
+    if (currentConversation) {
       await deleteConversation(currentConversation.id)
+      setIsDeleteDialogOpen(false)
       navigate('/')
     }
   }
@@ -251,7 +274,7 @@ export default function ChatPage() {
                   >
                     {currentConversation.isPinned ? "Unstar" : "Star"}
                   </MenuItem>
-                  <MenuItem icon={<EditRegular />} onClick={handleRename}>
+                  <MenuItem icon={<EditRegular />} onClick={handleRenameClick}>
                     Rename
                   </MenuItem>
                   <MenuItem icon={<FolderAddRegular />} disabled>
@@ -261,7 +284,7 @@ export default function ChatPage() {
                   <MenuItem
                     icon={<DeleteRegular />}
                     className="delete-menu-item"
-                    onClick={handleDelete}
+                    onClick={handleDeleteClick}
                   >
                     Delete
                   </MenuItem>
@@ -337,6 +360,47 @@ export default function ChatPage() {
       <div className="composer-wrapper bottom">
         {composerBox}
       </div>
+
+      <Dialog open={isRenameDialogOpen} onOpenChange={(_, { open }) => setIsRenameDialogOpen(open)}>
+        <DialogSurface>
+          <DialogBody>
+            <DialogTitle>Rename Conversation</DialogTitle>
+            <DialogContent>
+              <Input
+                value={renameInput}
+                onChange={(_e, data) => setRenameInput(data.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    onRenameSubmit()
+                  }
+                }}
+                style={{ width: '100%' }}
+                autoFocus
+                placeholder="Conversation title"
+              />
+            </DialogContent>
+            <DialogActions>
+              <Button appearance="secondary" onClick={() => setIsRenameDialogOpen(false)}>Cancel</Button>
+              <Button appearance="primary" onClick={onRenameSubmit}>Save</Button>
+            </DialogActions>
+          </DialogBody>
+        </DialogSurface>
+      </Dialog>
+
+      <Dialog open={isDeleteDialogOpen} onOpenChange={(_, { open }) => setIsDeleteDialogOpen(open)}>
+        <DialogSurface>
+          <DialogBody>
+            <DialogTitle>Delete Conversation</DialogTitle>
+            <DialogContent>
+              Are you sure you want to delete this conversation? This action cannot be undone.
+            </DialogContent>
+            <DialogActions>
+              <Button appearance="secondary" onClick={() => setIsDeleteDialogOpen(false)}>Cancel</Button>
+              <Button appearance="primary" onClick={onDeleteConfirm}>Delete</Button>
+            </DialogActions>
+          </DialogBody>
+        </DialogSurface>
+      </Dialog>
     </div >
   )
 }
