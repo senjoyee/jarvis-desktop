@@ -131,7 +131,7 @@ export default function ChatPage() {
   }
 
   // Reuseable components
-  const ModelSelector = () => (
+  const modelSelector = (
     <Menu positioning="below-end">
       <MenuTrigger disableButtonEnhancement>
         <Button
@@ -167,7 +167,7 @@ export default function ChatPage() {
     </Menu>
   )
 
-  const ComposerBox = () => (
+  const composerBox = (
     <div className="composer-box">
       <textarea
         ref={textareaRef}
@@ -187,7 +187,7 @@ export default function ChatPage() {
           {/* Add +, Code, etc buttons here later if needed */}
         </div>
         <div className="composer-controls-right">
-          <ModelSelector />
+          {modelSelector}
           {isStreaming ? (
             <Button
               icon={<StopRegular />}
@@ -220,7 +220,7 @@ export default function ChatPage() {
         <div className="centered-content">
           <h2 className="greeting-title">Joyee is thinking</h2>
           <div className="composer-wrapper centered">
-            <ComposerBox />
+            {composerBox}
           </div>
           {!hasApiKey && (
             <p className="api-key-warning">
@@ -335,7 +335,7 @@ export default function ChatPage() {
       </div>
 
       <div className="composer-wrapper bottom">
-        <ComposerBox />
+        {composerBox}
       </div>
     </div >
   )
