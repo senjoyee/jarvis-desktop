@@ -200,13 +200,11 @@ body {
 }
 
 .message.user {
-  background-color: #3d3d3d;
-  padding: 12px 16px;
-  border-radius: 18px;
   margin-left: auto;
   margin-right: 20px;
-  max-width: fit-content;
   max-width: 80%;
+  display: flex;
+  justify-content: flex-end;
 }
 
 .message.assistant {
@@ -841,6 +839,7 @@ body {
 .sidebar.collapsed .delete-btn {
   display: none;
 }
+
 /* Ensure New Chat button is visible in collapsed mode */
 .sidebar.collapsed .new-chat-btn {
   display: flex !important;
@@ -852,8 +851,9 @@ body {
   --font-base: 'Inter', system-ui, -apple-system, sans-serif;
   --font-serif: 'Source Serif 4', serif;
   --font-display: 'Frank Ruhl Libre', 'Source Serif 4', serif;
-  
-  --bg-primary: #17181c; /* Slightly warmer dark background */
+
+  --bg-primary: #17181c;
+  /* Slightly warmer dark background */
   --bg-secondary: #212226;
   --text-primary: #e6e6e6;
   --text-secondary: #9da3ae;
@@ -863,16 +863,19 @@ body {
   font-family: var(--font-base);
   background-color: var(--bg-primary);
   color: var(--text-primary);
-  letter-spacing: -0.01em; /* Modern tightness */
+  letter-spacing: -0.01em;
+  /* Modern tightness */
 }
 
 /* Chat Headers & Display Text */
 .empty-state h2 {
   font-family: var(--font-display);
-  font-weight: 300; /* Lighter weight for elegance */
+  font-weight: 300;
+  /* Lighter weight for elegance */
   font-size: 32px;
   letter-spacing: -0.02em;
-  color: #d1d5db; /* Softer white */
+  color: #d1d5db;
+  /* Softer white */
   margin-bottom: 24px;
 }
 
@@ -882,7 +885,8 @@ body {
   font-size: 15px;
   line-height: 1.5;
   color: #fff;
-  background-color: #2b2d31; /* Subtle bubble */
+  background-color: #2b2d31;
+  /* Subtle bubble */
   padding: 10px 14px;
   border-radius: 12px;
   display: inline-block;
@@ -891,14 +895,17 @@ body {
 /* Assistant Messages - Serif, Editorial */
 .message.assistant .message-content {
   font-family: var(--font-serif);
-  font-size: 17px; /* Slightly larger for reading */
+  font-size: 17px;
+  /* Slightly larger for reading */
   line-height: 1.6;
   color: #ececec;
   font-weight: 400;
 }
 
 /* Specific overrides for Assistant Headers/Code */
-.message.assistant h1, .message.assistant h2, .message.assistant h3 {
+.message.assistant h1,
+.message.assistant h2,
+.message.assistant h3 {
   font-family: var(--font-display);
   font-weight: 500;
   margin-top: 1.5em;
@@ -915,7 +922,8 @@ body {
 
 /* Chat Title */
 .chat-title {
-  font-family: var(--font-base); /* Keep title clean sans-serif */
+  font-family: var(--font-base);
+  /* Keep title clean sans-serif */
   font-weight: 600;
   letter-spacing: -0.01em;
 }
@@ -926,7 +934,8 @@ body {
 }
 
 /* Code Blocks - Monospace */
-code, pre {
+code,
+pre {
   font-family: 'JetBrains Mono', 'Fira Code', monospace;
   font-size: 13px;
 }
@@ -936,11 +945,12 @@ code, pre {
 :root {
   /* UI: Clean sans-serif like Claude */
   --font-base: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  
+
   /* Content: Editorial serif (Newsreader is closest to Tiempos/Anthropic Serif) */
   --font-serif: 'Newsreader', 'Times New Roman', Times, serif;
-  
-  --bg-primary: #191919; /* Slightly warmer dark mode */
+
+  --bg-primary: #191919;
+  /* Slightly warmer dark mode */
   --bg-secondary: #222222;
   --text-primary: #ececec;
   --text-secondary: #a1a1aa;
@@ -957,20 +967,25 @@ body {
 /* Headers - 'Joyee is thinking' */
 .empty-state h2 {
   font-family: var(--font-serif);
-  font-weight: 360; /* Precision weight match */
+  font-weight: 360;
+  /* Precision weight match */
   font-size: 32px;
   line-height: 1.2;
   letter-spacing: -0.02em;
-  color: #d4d4d8; /* Soft white */
+  color: #d4d4d8;
+  /* Soft white */
   margin-bottom: 24px;
 }
 
 /* Assistant Responses */
 .message.assistant .message-content {
   font-family: var(--font-serif);
-  font-weight: 360; /* Precision match */
-  font-size: 17px; /* Optimal reading size */
-  line-height: 1.65; /* 26.4px / 16px approx */
+  font-weight: 360;
+  /* Precision match */
+  font-size: 17px;
+  /* Optimal reading size */
+  line-height: 1.65;
+  /* 26.4px / 16px approx */
   color: #e4e4e7;
   letter-spacing: normal;
 }
@@ -995,7 +1010,8 @@ body {
 }
 
 /* Keep code blocks distinct */
-code, pre {
+code,
+pre {
   font-family: 'JetBrains Mono', 'Fira Code', monospace;
   font-size: 13px;
   line-height: 1.5;
@@ -1011,12 +1027,14 @@ code, pre {
   align-items: center;
   justify-content: center;
   height: 100%;
-  background-color: var(--bg-primary); /* Ensure consistent bg */
+  background-color: var(--bg-primary);
+  /* Ensure consistent bg */
 }
 
 .centered-content {
   width: 100%;
-  max-width: 750px; /* Optimal reading width */
+  max-width: 750px;
+  /* Optimal reading width */
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1027,7 +1045,8 @@ code, pre {
 .greeting-title {
   font-family: var(--font-display);
   font-weight: 360;
-  font-size: 42px; /* Large and elegant */
+  font-size: 42px;
+  /* Large and elegant */
   color: #e8e8e8;
   margin-bottom: 40px;
   letter-spacing: -0.02em;
@@ -1040,19 +1059,22 @@ code, pre {
 }
 
 .composer-wrapper.centered {
-  margin-bottom: 40px; /* Space for footer items if needed */
+  margin-bottom: 40px;
+  /* Space for footer items if needed */
 }
 
 .composer-wrapper.bottom {
   padding: 16px 20px 24px;
-  background-color: var(--bg-primary); /* Match bg so it blends */
+  background-color: var(--bg-primary);
+  /* Match bg so it blends */
   /* Remove top border to look floating, or keep it subtle */
   /* border-top: 1px solid #3c3c3c; */
 }
 
 /* The Box Itself */
 .composer-box {
-  background-color: #303030; /* Lighter than bg-primary */
+  background-color: #303030;
+  /* Lighter than bg-primary */
   border: 1px solid #424242;
   border-radius: 16px;
   padding: 14px 16px 12px;
@@ -1104,7 +1126,8 @@ code, pre {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-left: auto; /* Push to right */
+  margin-left: auto;
+  /* Push to right */
 }
 
 /* Model Selector Button override */
@@ -1148,4 +1171,3 @@ code, pre {
   padding: 8px 12px;
   border-radius: 6px;
 }
-
