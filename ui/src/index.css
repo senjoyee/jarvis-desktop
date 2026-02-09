@@ -51,6 +51,12 @@ body {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  transition: width 0.2s ease-in-out, min-width 0.2s ease-in-out;
+}
+
+.sidebar.collapsed {
+  width: 64px;
+  min-width: 64px;
 }
 
 .sidebar-header {
@@ -61,6 +67,16 @@ body {
   justify-content: space-between;
 }
 
+.sidebar.collapsed .sidebar-header {
+  padding: 16px 0;
+  justify-content: center;
+}
+
+.sidebar.collapsed .sidebar-header > span,
+.sidebar.collapsed .sidebar-header > button[title="New Chat"] {
+  display: none;
+}
+
 .sidebar-section {
   padding: 12px 16px 8px;
   font-size: 11px;
@@ -68,6 +84,19 @@ body {
   text-transform: uppercase;
   color: #888;
   letter-spacing: 0.5px;
+}
+
+.sidebar.collapsed .sidebar-section {
+  text-align: center;
+  padding: 12px 0 8px;
+}
+
+.sidebar.collapsed .sidebar-section > span:first-of-type {
+  display: none;
+}
+
+.sidebar.collapsed .server-badge {
+  margin-left: 0 !important;
 }
 
 .sidebar-content {
@@ -88,6 +117,11 @@ body {
   transition: background-color 0.15s;
 }
 
+.sidebar.collapsed .conversation-item {
+  justify-content: center;
+  padding: 10px 0;
+}
+
 .conversation-item:hover {
   background-color: #2d2d30;
 }
@@ -102,6 +136,18 @@ body {
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: 14px;
+}
+
+.sidebar.collapsed .conversation-title {
+  display: none;
+}
+
+.sidebar.collapsed .delete-btn {
+  display: none;
+}
+
+.sidebar.collapsed .no-conversations {
+  display: none;
 }
 
 .main-content {

@@ -5,14 +5,17 @@ import {
   SettingsRegular,
   PlugConnectedRegular,
   AddRegular,
-  DeleteRegular
+  DeleteRegular,
+  NavigationRegular
 } from '@fluentui/react-icons'
 import { useStore } from '../store'
 import type { Conversation } from '../types'
+import { useState } from 'react'
 
 export default function Layout() {
   const navigate = useNavigate()
   const location = useLocation()
+  const [collapsed, setCollapsed] = useState(false)
 
   const conversations = useStore((state) => state.conversations)
   const currentConversationId = useStore((state) => state.currentConversationId)
@@ -40,9 +43,15 @@ export default function Layout() {
 
   return (
     <div className="app-layout">
-      <aside className="sidebar">
+      <aside className={`sidebar ${collapsed ? 'collapsed' : ''}`}>
         <div className="sidebar-header">
-          <span style={{ fontWeight: 600, fontSize: 16 }}>Jarvis</span>
+          <Button
+            icon={<NavigationRegular />}
+            appearance="subtle"
+            onClick={() => setCollapsed(!collapsed)}
+            title="Toggle Sidebar"
+          />
+          {!collapsed && <span style={{ fontWeight: 600, fontSize: 16 }}>Jarvis</span>}
           <Button
             icon={<AddRegular />}
             appearance="subtle"
@@ -59,10 +68,12 @@ export default function Layout() {
                 key={conv.id}
                 className={`conversation-item ${currentConversationId === conv.id ? 'active' : ''}`}
                 onClick={() => handleSelectConversation(conv)}
+                title={collapsed ? conv.title : undefined}
               >
                 <ChatRegular />
                 <span className="conversation-title">{conv.title}</span>
                 <Button
+                  className="delete-btn"
                   icon={<DeleteRegular />}
                   appearance="subtle"
                   size="small"
@@ -72,8 +83,8 @@ export default function Layout() {
               </li>
             ))}
             {conversations.length === 0 && (
-              <li style={{ padding: '10px 16px', color: '#888', fontSize: 13 }}>
-                No conversations yet
+              <li className="no-conversations" style={{ padding: '10px 16px', color: '#888', fontSize: 13 }}>
+                No conversations
               </li>
             )}
           </ul>
@@ -81,14 +92,14 @@ export default function Layout() {
           <div className="sidebar-section" style={{ marginTop: 24 }}>
             <span>MCP Servers</span>
             {connectedServers > 0 && (
-              <span style={{
+              <span className="server-badge" style={{
                 marginLeft: 8,
                 fontSize: 10,
                 padding: '2px 6px',
                 background: '#28a745',
                 borderRadius: 4
               }}>
-                {connectedServers} connected
+                {connectedServers}
               </span>
             )}
           </div>
@@ -96,6 +107,7 @@ export default function Layout() {
             <li
               className={`conversation-item ${location.pathname === '/mcp' ? 'active' : ''}`}
               onClick={() => navigate('/mcp')}
+              title={collapsed ? "Manage Servers" : undefined}
             >
               <PlugConnectedRegular />
               <span className="conversation-title">Manage Servers</span>
@@ -111,10 +123,11 @@ export default function Layout() {
           <Button
             icon={<SettingsRegular />}
             appearance="subtle"
-            style={{ width: '100%', justifyContent: 'flex-start' }}
+            style={{ width: '100%', justifyContent: collapsed ? 'center' : 'flex-start' }}
             onClick={() => navigate('/settings')}
+            title={collapsed ? "Settings" : undefined}
           >
-            Settings
+            {!collapsed && "Settings"}
           </Button>
         </div>
       </aside>
