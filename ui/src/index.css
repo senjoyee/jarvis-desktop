@@ -643,7 +643,7 @@ body {
   border: none;
   color: #b0b0b0;
   cursor: pointer;
-  font-size: 13px;
+  font-size: 11px;
   font-family: inherit;
   text-align: left;
   transition: background-color 0.15s;
@@ -654,7 +654,7 @@ body {
 }
 
 .tool-call-icon {
-  font-size: 14px;
+  font-size: 12px;
 }
 
 .tool-call-name {
