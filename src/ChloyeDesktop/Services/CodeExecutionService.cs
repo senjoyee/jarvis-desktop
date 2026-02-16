@@ -224,7 +224,7 @@ public class CodeExecutionService
         {
             var startInfo = new ProcessStartInfo
             {
-                FileName = "npx",
+                FileName = GetExecutableName("npx"),
                 Arguments = $"tsx \"{codeFilePath}\"",
                 WorkingDirectory = _workspaceDir,
                 UseShellExecute = false,
@@ -406,7 +406,7 @@ public class CodeExecutionService
         {
             var psi = new ProcessStartInfo
             {
-                FileName = "node",
+                FileName = GetExecutableName("node"),
                 Arguments = "--version",
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
@@ -677,6 +677,23 @@ export function extractText(result: any): string {
 
     private static string Capitalize(string s) =>
         string.IsNullOrEmpty(s) ? s : char.ToUpperInvariant(s[0]) + s[1..];
+
+    /// <summary>
+    /// Resolves the correct executable name for the current platform.
+    /// On Windows, npx needs to be npx.cmd and node should be node.exe (optional but safer).
+    /// </summary>
+    private static string GetExecutableName(string baseName)
+    {
+        if (System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.Windows))
+        {
+            if (baseName.Equals("npx", StringComparison.OrdinalIgnoreCase))
+                return "npx.cmd";
+            if (baseName.Equals("node", StringComparison.OrdinalIgnoreCase))
+                return "node.exe";
+            return baseName + ".exe";
+        }
+        return baseName;
+    }
 
     #endregion
 }

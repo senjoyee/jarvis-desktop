@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("ChloyeDesktop")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+85d9169e75ca10c6a59fe63c7f243bb8d2a81834")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+d0a0073397240f828fa670eb935a02f99b8494e3")]
 [assembly: System.Reflection.AssemblyProductAttribute("ChloyeDesktop")]
 [assembly: System.Reflection.AssemblyTitleAttribute("ChloyeDesktop")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
