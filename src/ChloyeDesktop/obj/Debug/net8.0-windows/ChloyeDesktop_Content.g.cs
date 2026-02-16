@@ -7,8 +7,8 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-[assembly: System.Windows.Resources.AssemblyAssociatedContentFileAttribute("wwwroot/assets/index-benxugkk.css")]
-[assembly: System.Windows.Resources.AssemblyAssociatedContentFileAttribute("wwwroot/assets/index-ctzioxit.js")]
+[assembly: System.Windows.Resources.AssemblyAssociatedContentFileAttribute("wwwroot/assets/index-b9jldpc4.js")]
+[assembly: System.Windows.Resources.AssemblyAssociatedContentFileAttribute("wwwroot/assets/index-bhb1yhnr.css")]
 [assembly: System.Windows.Resources.AssemblyAssociatedContentFileAttribute("wwwroot/index.html")]
 [assembly: System.Windows.Resources.AssemblyAssociatedContentFileAttribute("webview2loader.dll")]
 [assembly: System.Windows.Resources.AssemblyAssociatedContentFileAttribute("webview2loader.dll")]

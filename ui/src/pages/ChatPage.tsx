@@ -25,7 +25,8 @@ import {
   StarFilled,
   EditRegular,
   DeleteRegular,
-  FolderAddRegular
+  FolderAddRegular,
+  CodeRegular
 } from '@fluentui/react-icons'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -58,6 +59,8 @@ export default function ChatPage() {
   const togglePinConversation = useStore((state) => state.togglePinConversation)
   const renameConversation = useStore((state) => state.renameConversation)
   const deleteConversation = useStore((state) => state.deleteConversation)
+  const codeMode = useStore((state) => state.codeMode)
+  const toggleCodeMode = useStore((state) => state.toggleCodeMode)
 
   const currentConversation = conversations.find(c => c.id === currentConversationId)
 
@@ -207,7 +210,14 @@ export default function ChatPage() {
       />
       <div className="composer-footer">
         <div className="composer-actions-left">
-          {/* Add +, Code, etc buttons here later if needed */}
+          <button
+            className={`code-mode-toggle ${codeMode ? 'active' : ''}`}
+            onClick={toggleCodeMode}
+            title={codeMode ? 'Code Mode: ON — LLM writes code to call tools' : 'Code Mode: OFF — Direct tool calling'}
+          >
+            <CodeRegular />
+            <span className="code-mode-label">Code</span>
+          </button>
         </div>
         <div className="composer-controls-right">
           {modelSelector}

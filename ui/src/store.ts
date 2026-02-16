@@ -22,6 +22,7 @@ interface AppState {
   // Settings
   hasApiKey: boolean
   availableModels: ModelDefinition[]
+  codeMode: boolean
 
   // Actions
   loadConversations: () => Promise<void>
@@ -57,6 +58,7 @@ interface AppState {
   clearApiKey: () => Promise<void>
   testOpenRouter: () => Promise<boolean>
   loadModels: () => Promise<void>
+  toggleCodeMode: () => void
 }
 
 export const useStore = create<AppState>((set, get) => ({
@@ -72,6 +74,7 @@ export const useStore = create<AppState>((set, get) => ({
   mcpServers: [],
   hasApiKey: false,
   availableModels: [],
+  codeMode: false,
 
   loadConversations: async () => {
     try {
@@ -183,7 +186,7 @@ export const useStore = create<AppState>((set, get) => ({
     try {
       const result = await invoke<{ userMessage: Message; assistantMessage: Message }>(
         'messages.send',
-        { conversationId: currentConversationId, content, model }
+        { conversationId: currentConversationId, content, model, codeMode: get().codeMode }
       )
 
       const realAssistantId = result.assistantMessage.id?.toString()
@@ -406,6 +409,10 @@ export const useStore = create<AppState>((set, get) => ({
       newMessages[msgIndex] = { ...newMessages[msgIndex], toolCalls }
       return { messages: newMessages }
     })
+  },
+
+  toggleCodeMode: () => {
+    set((state) => ({ codeMode: !state.codeMode }))
   }
 }))
 

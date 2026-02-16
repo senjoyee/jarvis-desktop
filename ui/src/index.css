@@ -1171,3 +1171,47 @@ pre {
   padding: 8px 12px;
   border-radius: 6px;
 }
+
+/* Code Mode Toggle */
+.code-mode-toggle {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border: 1px solid #555;
+  border-radius: 20px;
+  background: transparent;
+  color: #888;
+  font-family: var(--font-base);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.code-mode-toggle:hover {
+  border-color: #777;
+  color: #bbb;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.code-mode-toggle.active {
+  border-color: #4ade80;
+  color: #4ade80;
+  background: rgba(74, 222, 128, 0.08);
+}
+
+.code-mode-toggle.active:hover {
+  background: rgba(74, 222, 128, 0.14);
+  border-color: #6ee7a0;
+}
+
+.code-mode-toggle svg {
+  width: 14px;
+  height: 14px;
+}
+
+.code-mode-label {
+  line-height: 1;
+}
