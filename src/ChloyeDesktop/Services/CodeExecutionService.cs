@@ -493,6 +493,11 @@ rl.on('line', (line: string) => {
     }
 });
 
+// Unref stdin so the readline listener does not prevent the process from exiting.
+// During active tool calls, the pending Promise + setTimeout keeps the event loop alive.
+// Once all code finishes and no promises remain, the process exits gracefully.
+process.stdin.unref();
+
 /**
  * Calls an MCP tool via the .NET host bridge.
  * @param toolName - The full MCP tool name
@@ -509,13 +514,14 @@ export async function callMCPTool<T = any>(toolName: string, args: any): Promise
         const request = JSON.stringify({ id, tool: toolName, args });
         process.stdout.write(`__MCP_BRIDGE__:${request}\n`);
         
-        // Timeout after 30 seconds
-        setTimeout(() => {
+        // Timeout after 60 seconds (unref'd so it won't keep the process alive alone)
+        const timer = setTimeout(() => {
             if (pendingRequests.has(id)) {
                 pendingRequests.delete(id);
                 reject(new Error(`Tool call timed out: ${toolName}`));
             }
-        }, 30000);
+        }, 60000);
+        if (typeof timer.unref === 'function') timer.unref();
     });
 }
 
