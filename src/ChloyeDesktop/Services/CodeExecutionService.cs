@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.IO;
+using System.Net;
 using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
@@ -208,7 +209,7 @@ public class CodeExecutionService
     /// <summary>
     /// Executes LLM-generated TypeScript code in a sandboxed Node.js process.
     /// The code can import MCP tool wrappers from ./servers/ directory.
-    /// Tool calls are bridged back to .NET via stdin/stdout JSON-RPC.
+    /// Tool calls are bridged back to .NET via a localhost HTTP server.
     /// Returns stdout output (what the LLM should see) and any errors.
     /// </summary>
     public async Task<CodeExecutionResult> ExecuteCodeAsync(string code, CancellationToken ct = default)
@@ -228,30 +229,41 @@ public class CodeExecutionService
         var stdout = new StringBuilder();
         var stderr = new StringBuilder();
 
+        // Start the HTTP bridge server
+        HttpListener? httpListener = null;
+        int bridgePort = 0;
+        CancellationTokenSource? serverCts = null;
+
         try
         {
+            // Find a free port and start the bridge HTTP server
+            bridgePort = GetFreePort();
+            httpListener = new HttpListener();
+            httpListener.Prefixes.Add($"http://localhost:{bridgePort}/");
+            httpListener.Start();
+            serverCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            _ = RunBridgeServerAsync(httpListener, serverCts.Token);
+            _logger.LogInformation("Bridge HTTP server started on port {Port}", bridgePort);
+
             var startInfo = new ProcessStartInfo
             {
                 FileName = GetExecutableName("npx"),
                 Arguments = GetNpxArguments($"tsx \"{codeFilePath}\""),
                 WorkingDirectory = _workspaceDir,
                 UseShellExecute = false,
-                RedirectStandardInput = true,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 CreateNoWindow = true
             };
 
-            // Set NODE_PATH so imports resolve
+            // Set NODE_PATH so imports resolve, and pass bridge port
             startInfo.EnvironmentVariables["NODE_PATH"] = _workspaceDir;
+            startInfo.EnvironmentVariables["MCP_BRIDGE_PORT"] = bridgePort.ToString();
 
             using var process = new Process { StartInfo = startInfo };
             var outputDone = new TaskCompletionSource<bool>();
             var errorDone = new TaskCompletionSource<bool>();
 
-            // Handle stdout — may contain both console.log output and bridge requests
-            var bridgeRequests = new ConcurrentQueue<string>();
-            
             process.OutputDataReceived += (s, e) =>
             {
                 if (e.Data == null)
@@ -259,19 +271,7 @@ public class CodeExecutionService
                     outputDone.TrySetResult(true);
                     return;
                 }
-
-                // Check if this is a bridge request (JSON-RPC from the sandbox)
-                if (e.Data.StartsWith("__MCP_BRIDGE__:"))
-                {
-                    var requestJson = e.Data["__MCP_BRIDGE__:".Length..];
-                    bridgeRequests.Enqueue(requestJson);
-                    // Handle bridge call and write response to stdin
-                    _ = HandleBridgeRequestAsync(process, requestJson);
-                }
-                else
-                {
-                    stdout.AppendLine(e.Data);
-                }
+                stdout.AppendLine(e.Data);
             };
 
             process.ErrorDataReceived += (s, e) =>
@@ -351,58 +351,99 @@ public class CodeExecutionService
         }
         finally
         {
-            // Clean up the temp code file
+            // Clean up HTTP server and temp code file
+            try { serverCts?.Cancel(); } catch { }
+            try { httpListener?.Stop(); httpListener?.Close(); } catch { }
             try { File.Delete(codeFilePath); } catch { }
         }
     }
 
     /// <summary>
-    /// Handles a bridge request from the sandboxed process.
-    /// The sandbox sends requests tagged with __MCP_BRIDGE__: prefix on stdout.
-    /// We execute the MCP tool call and write the response to the process's stdin.
+    /// Runs the HTTP bridge server that handles tool call requests from the sandbox.
+    /// Listens for POST /call-tool requests and routes them to MCP.
     /// </summary>
-    private async Task HandleBridgeRequestAsync(Process process, string requestJson)
+    private async Task RunBridgeServerAsync(HttpListener listener, CancellationToken ct)
     {
+        while (!ct.IsCancellationRequested)
+        {
+            try
+            {
+                var context = await listener.GetContextAsync().WaitAsync(ct);
+                _ = HandleHttpBridgeRequestAsync(context);
+            }
+            catch (OperationCanceledException) { break; }
+            catch (HttpListenerException) { break; }
+            catch (ObjectDisposedException) { break; }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Bridge server error");
+            }
+        }
+    }
+
+    /// <summary>
+    /// Handles a single HTTP bridge request from the sandboxed process.
+    /// Expects POST with JSON body { tool: string, args: object }.
+    /// Returns JSON response { result: ... } or { error: string }.
+    /// </summary>
+    private async Task HandleHttpBridgeRequestAsync(HttpListenerContext context)
+    {
+        var response = context.Response;
+        response.ContentType = "application/json";
+
         try
         {
-            var request = JsonDocument.Parse(requestJson);
+            using var reader = new StreamReader(context.Request.InputStream);
+            var body = await reader.ReadToEndAsync();
+            var request = JsonDocument.Parse(body);
             var root = request.RootElement;
 
-            var id = root.GetProperty("id").GetInt32();
             var toolName = root.GetProperty("tool").GetString()!;
             var args = root.GetProperty("args");
 
-            _logger.LogInformation("Bridge call from sandbox: {ToolName}", toolName);
+            _logger.LogInformation("HTTP bridge call from sandbox: {ToolName}", toolName);
 
             try
             {
                 var result = await _mcp.CallToolByNameAsync(toolName, args);
-                var response = JsonSerializer.Serialize(new
-                {
-                    id,
-                    result = result
-                });
-
-                await process.StandardInput.WriteLineAsync($"__MCP_RESPONSE__:{response}");
-                await process.StandardInput.FlushAsync();
+                var responseJson = JsonSerializer.Serialize(new { result });
+                var bytes = Encoding.UTF8.GetBytes(responseJson);
+                response.StatusCode = 200;
+                await response.OutputStream.WriteAsync(bytes);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Bridge tool call failed: {ToolName}", toolName);
-                var errorResponse = JsonSerializer.Serialize(new
-                {
-                    id,
-                    error = ex.Message
-                });
-
-                await process.StandardInput.WriteLineAsync($"__MCP_RESPONSE__:{errorResponse}");
-                await process.StandardInput.FlushAsync();
+                var errorJson = JsonSerializer.Serialize(new { error = ex.Message });
+                var bytes = Encoding.UTF8.GetBytes(errorJson);
+                response.StatusCode = 200; // Still 200, error in body
+                await response.OutputStream.WriteAsync(bytes);
             }
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to parse bridge request");
+            _logger.LogError(ex, "Failed to parse HTTP bridge request");
+            var errorJson = JsonSerializer.Serialize(new { error = "Invalid request: " + ex.Message });
+            var bytes = Encoding.UTF8.GetBytes(errorJson);
+            response.StatusCode = 400;
+            await response.OutputStream.WriteAsync(bytes);
         }
+        finally
+        {
+            response.Close();
+        }
+    }
+
+    /// <summary>
+    /// Finds a free TCP port to use for the bridge HTTP server.
+    /// </summary>
+    private static int GetFreePort()
+    {
+        var listener = new System.Net.Sockets.TcpListener(IPAddress.Loopback, 0);
+        listener.Start();
+        var port = ((System.Net.IPEndPoint)listener.LocalEndpoint).Port;
+        listener.Stop();
+        return port;
     }
 
     /// <summary>
@@ -459,70 +500,40 @@ public class CodeExecutionService
 
     /// <summary>
     /// Generates the bridge module (__mcp_bridge.ts) that tool wrappers import from.
-    /// This module handles communication between the sandbox and the .NET host.
+    /// Uses HTTP to communicate with the .NET host bridge server.
     /// </summary>
     private string GenerateBridgeModule()
     {
         return @"// Auto-generated MCP Bridge Module
-// This module handles communication between the sandbox and the .NET host.
+// This module communicates with the .NET host via HTTP.
 // Tool wrappers import callMCPTool from this module.
 
-import { createInterface } from 'readline';
-
-let requestId = 0;
-const pendingRequests = new Map<number, { resolve: (value: any) => void; reject: (reason: any) => void }>();
-
-// Listen for responses from the .NET host on stdin
-const rl = createInterface({ input: process.stdin, terminal: false });
-rl.on('line', (line: string) => {
-    if (line.startsWith('__MCP_RESPONSE__:')) {
-        try {
-            const data = JSON.parse(line.slice('__MCP_RESPONSE__:'.length));
-            const pending = pendingRequests.get(data.id);
-            if (pending) {
-                pendingRequests.delete(data.id);
-                if (data.error) {
-                    pending.reject(new Error(data.error));
-                } else {
-                    pending.resolve(data.result);
-                }
-            }
-        } catch (e) {
-            // Ignore parse errors
-        }
-    }
-});
-
-// Unref stdin so the readline listener does not prevent the process from exiting.
-// During active tool calls, the pending Promise + setTimeout keeps the event loop alive.
-// Once all code finishes and no promises remain, the process exits gracefully.
-process.stdin.unref();
+const BRIDGE_PORT = process.env.MCP_BRIDGE_PORT;
+if (!BRIDGE_PORT) {
+    throw new Error('MCP_BRIDGE_PORT environment variable is not set.');
+}
+const BRIDGE_URL = `http://localhost:${BRIDGE_PORT}/call-tool`;
 
 /**
- * Calls an MCP tool via the .NET host bridge.
+ * Calls an MCP tool via the .NET host HTTP bridge.
  * @param toolName - The full MCP tool name
  * @param args - The arguments to pass to the tool
  * @returns The tool result
  */
 export async function callMCPTool<T = any>(toolName: string, args: any): Promise<T> {
-    const id = ++requestId;
-    
-    return new Promise<T>((resolve, reject) => {
-        pendingRequests.set(id, { resolve, reject });
-        
-        // Send request to .NET host via stdout with special prefix
-        const request = JSON.stringify({ id, tool: toolName, args });
-        process.stdout.write(`__MCP_BRIDGE__:${request}\n`);
-        
-        // Timeout after 60 seconds (unref'd so it won't keep the process alive alone)
-        const timer = setTimeout(() => {
-            if (pendingRequests.has(id)) {
-                pendingRequests.delete(id);
-                reject(new Error(`Tool call timed out: ${toolName}`));
-            }
-        }, 60000);
-        if (typeof timer.unref === 'function') timer.unref();
+    const response = await fetch(BRIDGE_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tool: toolName, args })
     });
+    
+    const data = await response.json() as any;
+    
+    if (data.error) {
+        throw new Error(data.error);
+    }
+    
+    return data.result as T;
 }
 
 /**
