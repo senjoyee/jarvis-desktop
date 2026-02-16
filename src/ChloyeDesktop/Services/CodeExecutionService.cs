@@ -225,7 +225,7 @@ public class CodeExecutionService
             var startInfo = new ProcessStartInfo
             {
                 FileName = GetExecutableName("npx"),
-                Arguments = $"tsx \"{codeFilePath}\"",
+                Arguments = GetNpxArguments($"tsx \"{codeFilePath}\""),
                 WorkingDirectory = _workspaceDir,
                 UseShellExecute = false,
                 RedirectStandardInput = true,
@@ -680,19 +680,32 @@ export function extractText(result: any): string {
 
     /// <summary>
     /// Resolves the correct executable name for the current platform.
-    /// On Windows, npx needs to be npx.cmd and node should be node.exe (optional but safer).
+    /// On Windows, we use cmd.exe to run npx so that PATH and npm internals resolve correctly.
     /// </summary>
     private static string GetExecutableName(string baseName)
     {
         if (System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.Windows))
         {
             if (baseName.Equals("npx", StringComparison.OrdinalIgnoreCase))
-                return "npx.cmd";
+                return "cmd.exe";
             if (baseName.Equals("node", StringComparison.OrdinalIgnoreCase))
                 return "node.exe";
             return baseName + ".exe";
         }
         return baseName;
+    }
+
+    /// <summary>
+    /// Wraps arguments for npx commands. On Windows, we run through cmd.exe /c
+    /// to ensure proper PATH and npm module resolution.
+    /// </summary>
+    private static string GetNpxArguments(string args)
+    {
+        if (System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.Windows))
+        {
+            return $"/c npx {args}";
+        }
+        return args;
     }
 
     #endregion
