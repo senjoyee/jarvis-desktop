@@ -28,7 +28,7 @@ public class CodeExecutionService
     {
         _logger = logger;
         _mcp = mcp;
-        _timeoutSeconds = 30;
+        _timeoutSeconds = 120;
     }
 
     /// <summary>
@@ -62,14 +62,22 @@ public class CodeExecutionService
         var tsconfigPath = Path.Combine(_workspaceDir, "tsconfig.json");
         await File.WriteAllTextAsync(tsconfigPath, @"{
   ""compilerOptions"": {
-    ""target"": ""ES2020"",
-    ""module"": ""ESNext"",
-    ""moduleResolution"": ""node"",
+    ""target"": ""ES2022"",
+    ""module"": ""NodeNext"",
+    ""moduleResolution"": ""NodeNext"",
     ""esModuleInterop"": true,
     ""strict"": false,
     ""outDir"": ""./dist"",
     ""rootDir"": "".""
   }
+}");
+
+        // Write package.json to force ESM (enables top-level await)
+        var packageJsonPath = Path.Combine(_workspaceDir, "package.json");
+        await File.WriteAllTextAsync(packageJsonPath, @"{
+  ""type"": ""module"",
+  ""description"": ""Auto-generated Code Mode workspace"",
+  ""license"": ""MIT""
 }");
 
         // Generate tool files for each connected server
