@@ -50,7 +50,7 @@ public class McpManager
         // Config file is now the source of truth - no database storage needed
     }
 
-    public async Task InitializeAsync()
+    public Task InitializeAsync()
     {
         var servers = ListServers();
         _logger.LogInformation("Auto-starting {Count} MCP servers...", servers.Count);
@@ -63,6 +63,8 @@ public class McpManager
                 _ = StartServer(server.Id);
             }
         }
+
+        return Task.CompletedTask;
     }
 
     #region Server Configuration CRUD
