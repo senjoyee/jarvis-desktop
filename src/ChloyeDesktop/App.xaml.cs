@@ -39,6 +39,7 @@ public partial class App : Application
         services.AddSingleton<ChatService>();
         services.AddSingleton<McpManager>();
         services.AddSingleton<SkillService>();
+        services.AddSingleton<CodeExecutionService>();
     }
 
     protected override void OnExit(ExitEventArgs e)

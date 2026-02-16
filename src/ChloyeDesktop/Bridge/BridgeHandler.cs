@@ -16,6 +16,7 @@ public class BridgeHandler
     private readonly SecretsService _secrets;
     private readonly McpManager _mcp;
     private readonly SkillService _skills;
+    private readonly CodeExecutionService _codeExec;
     private CancellationTokenSource? _streamCts;
     
     // Callback to send streaming events to UI
@@ -31,6 +32,7 @@ public class BridgeHandler
         _secrets = services.GetRequiredService<SecretsService>();
         _mcp = services.GetRequiredService<McpManager>();
         _skills = services.GetRequiredService<SkillService>();
+        _codeExec = services.GetRequiredService<CodeExecutionService>();
     }
 
     public async Task<string> HandleMessage(string messageJson)
@@ -115,6 +117,12 @@ public class BridgeHandler
                 parameters?.GetProperty("args") ?? default),
             "mcp.allTools" => await GetAllMcpTools(),
 
+            // Code Mode
+            "codeMode.checkNode" => await _codeExec.IsNodeAvailableAsync(),
+            "codeMode.searchTools" => await _codeExec.SearchToolsAsync(
+                parameters?.GetProperty("query").GetString()!,
+                parameters?.TryGetProperty("detailLevel", out var dl) == true ? dl.GetString()! : "full"),
+
             _ => throw new NotSupportedException($"Unknown method: {method}")
         };
     }
@@ -124,6 +132,9 @@ public class BridgeHandler
         var conversationId = Guid.Parse(parameters?.GetProperty("conversationId").GetString()!);
         var content = parameters?.GetProperty("content").GetString()!;
         var model = parameters?.GetProperty("model").GetString() ?? "openai/gpt-5-mini";
+        
+        // Check if Code Mode is enabled
+        var codeMode = parameters?.TryGetProperty("codeMode", out var cm) == true && cm.GetBoolean();
 
         // Save user message
         var userMessage = _conversations.AddMessage(conversationId, "user", content, model);
@@ -138,21 +149,49 @@ public class BridgeHandler
             .Select(m => new ChatMessage { Role = m.Role, Content = m.Content })
             .ToList();
 
-        // Fetch tools from all connected MCP servers
-        var mcpTools = await _mcp.GetAllToolsAsync();
-        // Filter out tools with missing names to prevent OpenAI API validation errors
-        var validTools = mcpTools.Where(t => !string.IsNullOrEmpty(t.Tool.Name)).ToList();
-        var openAiTools = validTools.Select(t => ConvertToOpenAiFunction(t.Tool)).ToList();
-        _logger.LogInformation("Loaded {ToolCount} valid tools from {ServerCount} MCP servers (filtered {FilteredCount} invalid)", 
-            openAiTools.Count, validTools.Select(t => t.ServerId).Distinct().Count(), mcpTools.Count - validTools.Count);
+        List<object> openAiTools;
+        string systemPrompt;
+        List<McpToolWithServer> validTools;
 
-        // Build system prompt with MCP context
-        var connectedServers = _mcp.ListServers()
-            .Where(s => _mcp.GetStatus(s.Id) == McpConnectionStatus.Connected)
-            .Select(s => s.Name)
-            .ToList();
-        
-        var systemPrompt = BuildSystemPrompt(connectedServers, validTools);
+        if (codeMode)
+        {
+            // === CODE MODE ===
+            // Instead of loading all individual tool definitions, provide:
+            // 1. execute_code — runs TypeScript in a sandbox with MCP tool access
+            // 2. search_tools — lets the LLM discover available tools progressively
+            _logger.LogInformation("Code Mode enabled — generating tool wrappers");
+            
+            // Generate the tool wrapper files
+            var toolTree = await _codeExec.GetToolTreeSummaryAsync();
+            
+            // Build Code Mode tools (just 2 instead of potentially hundreds)
+            openAiTools = BuildCodeModeTools();
+            validTools = new List<McpToolWithServer>(); // Not used in code mode prompt
+
+            // Build Code Mode system prompt
+            var connectedServers = _mcp.ListServers()
+                .Where(s => _mcp.GetStatus(s.Id) == McpConnectionStatus.Connected)
+                .Select(s => s.Name)
+                .ToList();
+            systemPrompt = BuildCodeModeSystemPrompt(connectedServers, toolTree);
+            
+            _logger.LogInformation("Code Mode: providing 2 tools (execute_code, search_tools) instead of individual tool definitions");
+        }
+        else
+        {
+            // === DIRECT MODE (existing behavior) ===
+            var mcpTools = await _mcp.GetAllToolsAsync();
+            validTools = mcpTools.Where(t => !string.IsNullOrEmpty(t.Tool.Name)).ToList();
+            openAiTools = validTools.Select(t => ConvertToOpenAiFunction(t.Tool)).ToList();
+            _logger.LogInformation("Direct Mode: loaded {ToolCount} valid tools from {ServerCount} MCP servers (filtered {FilteredCount} invalid)", 
+                openAiTools.Count, validTools.Select(t => t.ServerId).Distinct().Count(), mcpTools.Count - validTools.Count);
+
+            var connectedServers = _mcp.ListServers()
+                .Where(s => _mcp.GetStatus(s.Id) == McpConnectionStatus.Connected)
+                .Select(s => s.Name)
+                .ToList();
+            systemPrompt = BuildSystemPrompt(connectedServers, validTools);
+        }
         
         // Insert system message at the beginning
         var messagesWithSystem = new List<ChatMessage>
@@ -259,16 +298,46 @@ public class BridgeHandler
                         delta = toolCallText
                     });
 
-                    // Execute the tool via MCP
+                    // Execute the tool via MCP (or Code Mode sandbox)
                     string toolResultText;
                     bool toolSuccess = true;
                     try
                     {
-                        var argsJson = JsonDocument.Parse(pendingToolCall.Arguments).RootElement;
-                        var result = await _mcp.CallToolByNameAsync(pendingToolCall.Name, argsJson);
-                        
-                        // Extract text from result
-                        toolResultText = ExtractToolResultText(result);
+                        if (codeMode && pendingToolCall.Name == "execute_code")
+                        {
+                            // === CODE MODE: Execute TypeScript in sandbox ===
+                            var argsJson = JsonDocument.Parse(pendingToolCall.Arguments).RootElement;
+                            var code = argsJson.GetProperty("code").GetString()!;
+                            
+                            _logger.LogInformation("Code Mode: executing TypeScript code ({Length} chars)", code.Length);
+                            var codeResult = await _codeExec.ExecuteCodeAsync(code, _streamCts!.Token);
+                            toolResultText = codeResult.ToResultString();
+                            toolSuccess = codeResult.Success;
+                            
+                            if (codeResult.TimedOut)
+                            {
+                                _logger.LogWarning("Code execution timed out");
+                            }
+                        }
+                        else if (codeMode && pendingToolCall.Name == "search_tools")
+                        {
+                            // === CODE MODE: Progressive tool discovery ===
+                            var argsJson = JsonDocument.Parse(pendingToolCall.Arguments).RootElement;
+                            var query = argsJson.GetProperty("query").GetString()!;
+                            var detailLevel = argsJson.TryGetProperty("detail_level", out var dlProp)
+                                ? dlProp.GetString()! : "full";
+                            
+                            toolResultText = await _codeExec.SearchToolsAsync(query, detailLevel);
+                        }
+                        else
+                        {
+                            // === DIRECT MODE: Call MCP tool directly ===
+                            var argsJson = JsonDocument.Parse(pendingToolCall.Arguments).RootElement;
+                            var result = await _mcp.CallToolByNameAsync(pendingToolCall.Name, argsJson);
+                            
+                            // Extract text from result
+                            toolResultText = ExtractToolResultText(result);
+                        }
                         _logger.LogDebug("Tool result: {Result}", toolResultText.Substring(0, Math.Min(200, toolResultText.Length)));
                     }
                     catch (Exception ex)
@@ -515,6 +584,163 @@ public class BridgeHandler
             sb.AppendLine("To use a skill, you MUST first read its instruction file using the `view_file` tool on the provided path. Do NOT guess the instructions.");
             sb.AppendLine();
             sb.AppendLine("**Available Skills:**");
+            
+            foreach (var skill in skills)
+            {
+                sb.AppendLine($"- **{skill.Name}**: {skill.Description}");
+                sb.AppendLine($"  Path: `{skill.Path}`");
+            }
+            sb.AppendLine();
+        }
+        
+        return sb.ToString();
+    }
+
+    /// <summary>
+    /// Builds the two OpenAI function definitions for Code Mode:
+    /// 1. execute_code — runs TypeScript code in a sandboxed environment
+    /// 2. search_tools — finds available tools by keyword
+    /// </summary>
+    private List<object> BuildCodeModeTools()
+    {
+        return new List<object>
+        {
+            new
+            {
+                type = "function",
+                function = new
+                {
+                    name = "execute_code",
+                    description = "Execute TypeScript code in a sandboxed environment with access to MCP tools. " +
+                        "Import tools from the './servers/' directory (e.g., import { toolName } from './servers/server-name'). " +
+                        "Use console.log() to output results that you want to see. " +
+                        "Tool wrappers return MCP results — use extractText() helper to get text content. " +
+                        "All intermediate data stays in the sandbox and doesn't consume context tokens.",
+                    parameters = new Dictionary<string, object>
+                    {
+                        ["type"] = "object",
+                        ["properties"] = new Dictionary<string, object>
+                        {
+                            ["code"] = new Dictionary<string, object>
+                            {
+                                ["type"] = "string",
+                                ["description"] = "TypeScript code to execute. Can import from './servers/{server-name}' directories. " +
+                                    "Use 'import { extractText } from \"./__mcp_bridge\"' to extract text from MCP results."
+                            }
+                        },
+                        ["required"] = new[] { "code" },
+                        ["additionalProperties"] = false
+                    }
+                }
+            },
+            new
+            {
+                type = "function",
+                function = new
+                {
+                    name = "search_tools",
+                    description = "Search available MCP tools by keyword. Use this to discover what tools are available " +
+                        "before writing code. Returns tool names, descriptions, and import instructions.",
+                    parameters = new Dictionary<string, object>
+                    {
+                        ["type"] = "object",
+                        ["properties"] = new Dictionary<string, object>
+                        {
+                            ["query"] = new Dictionary<string, object>
+                            {
+                                ["type"] = "string",
+                                ["description"] = "Search keyword to find relevant tools (matches against tool names, descriptions, and server names)"
+                            },
+                            ["detail_level"] = new Dictionary<string, object>
+                            {
+                                ["type"] = "string",
+                                ["enum"] = new[] { "name", "description", "full" },
+                                ["description"] = "Level of detail: 'name' for just names, 'description' for name+description, 'full' for complete info with schemas"
+                            }
+                        },
+                        ["required"] = new[] { "query" },
+                        ["additionalProperties"] = false
+                    }
+                }
+            }
+        };
+    }
+
+    /// <summary>
+    /// Builds the system prompt for Code Mode, instructing the LLM to write code
+    /// that imports and calls MCP tools rather than calling them directly.
+    /// </summary>
+    private string BuildCodeModeSystemPrompt(List<string> connectedServers, string toolTree)
+    {
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine("You are Jarvis, a helpful AI assistant running in a desktop application.");
+        sb.AppendLine();
+        sb.AppendLine("## Code Execution Mode (Active)");
+        sb.AppendLine("You are in **Code Mode**. Instead of calling tools directly, you write TypeScript code that imports and calls them.");
+        sb.AppendLine("This is more efficient because intermediate data stays in the execution environment and doesn't consume context tokens.");
+        sb.AppendLine();
+        sb.AppendLine("### How It Works");
+        sb.AppendLine("1. Use the `search_tools` function to discover available tools by keyword");
+        sb.AppendLine("2. Use the `execute_code` function to run TypeScript code that imports and calls tools");
+        sb.AppendLine("3. Use `console.log()` to output only the data you need — this is what you'll see back");
+        sb.AppendLine("4. All intermediate data processing (filtering, transformation, joining) happens in-code");
+        sb.AppendLine();
+        sb.AppendLine("### Available MCP Servers");
+        
+        if (connectedServers.Count > 0)
+        {
+            sb.AppendLine($"**Connected servers ({connectedServers.Count}):**");
+            foreach (var server in connectedServers)
+            {
+                sb.AppendLine($"- {server}");
+            }
+        }
+        else
+        {
+            sb.AppendLine("No MCP servers currently connected.");
+        }
+        
+        sb.AppendLine();
+        sb.AppendLine("### Tool Filesystem");
+        sb.AppendLine("Tools are organized as importable TypeScript modules:");
+        sb.AppendLine("```");
+        sb.AppendLine("servers/");
+        sb.Append(toolTree);
+        sb.AppendLine("```");
+        sb.AppendLine();
+        sb.AppendLine("### Code Examples");
+        sb.AppendLine("```typescript");
+        sb.AppendLine("// Import tools from a server");
+        sb.AppendLine("import { toolName } from './servers/server-name';");
+        sb.AppendLine("import { extractText } from './__mcp_bridge';");
+        sb.AppendLine();
+        sb.AppendLine("// Call a tool and process results");
+        sb.AppendLine("const result = await toolName({ param: 'value' });");
+        sb.AppendLine("const text = extractText(result);");
+        sb.AppendLine("console.log(text);");
+        sb.AppendLine();
+        sb.AppendLine("// Process data in-code to avoid bloating context");
+        sb.AppendLine("const items = JSON.parse(text);");
+        sb.AppendLine("const filtered = items.filter(i => i.status === 'active');");
+        sb.AppendLine("console.log(`Found ${filtered.length} active items`);");
+        sb.AppendLine("console.log(JSON.stringify(filtered.slice(0, 5), null, 2));");
+        sb.AppendLine("```");
+        sb.AppendLine();
+        sb.AppendLine("### Important Guidelines");
+        sb.AppendLine("- Always use `search_tools` first if you're unsure which tools are available");
+        sb.AppendLine("- Use `console.log()` to output results — only logged output is returned to you");
+        sb.AppendLine("- Filter and transform data in code to keep context efficient");
+        sb.AppendLine("- You can chain multiple tool calls in a single `execute_code` invocation");
+        sb.AppendLine("- Handle errors with try/catch blocks in your code");
+        sb.AppendLine("- For simple questions that don't require tools, respond normally without code");
+
+        // Inject Skills
+        var skills = _skills.GetSkills();
+        if (skills.Count > 0)
+        {
+            sb.AppendLine();
+            sb.AppendLine("## Agent Skills");
+            sb.AppendLine("You are equipped with the following specialized skills:");
             
             foreach (var skill in skills)
             {

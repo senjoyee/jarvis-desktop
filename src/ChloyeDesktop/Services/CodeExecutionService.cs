@@ -1,0 +1,742 @@
+using System.Collections.Concurrent;
+using System.Diagnostics;
+using System.IO;
+using System.Text;
+using System.Text.Json;
+using Microsoft.Extensions.Logging;
+
+namespace ChloyeDesktop.Services;
+
+/// <summary>
+/// Implements the "Code Mode" pattern from the Anthropic engineering blog.
+/// Instead of loading all MCP tool definitions upfront, the LLM writes TypeScript code
+/// that calls MCP tools via generated wrapper files. This reduces token usage dramatically.
+///
+/// Architecture:
+///   1. GenerateToolFilesAsync — creates ./servers/{name}/{tool}.ts wrappers in a temp dir
+///   2. ExecuteCodeAsync — runs LLM-generated TypeScript in a sandboxed Node.js process
+///   3. The sandbox communicates with .NET via stdin/stdout JSON-RPC for actual MCP calls
+/// </summary>
+public class CodeExecutionService
+{
+    private readonly ILogger<CodeExecutionService> _logger;
+    private readonly McpManager _mcp;
+    private string? _workspaceDir;
+    private readonly int _timeoutSeconds;
+
+    public CodeExecutionService(ILogger<CodeExecutionService> logger, McpManager mcp)
+    {
+        _logger = logger;
+        _mcp = mcp;
+        _timeoutSeconds = 30;
+    }
+
+    /// <summary>
+    /// Gets the current workspace directory where tool files are generated.
+    /// Returns null if not yet generated.
+    /// </summary>
+    public string? WorkspaceDir => _workspaceDir;
+
+    /// <summary>
+    /// Generates TypeScript wrapper files for all connected MCP servers and their tools.
+    /// Creates a file tree like:
+    ///   workspace/
+    ///     __mcp_bridge.ts        ← bridge module for calling MCP tools
+    ///     servers/
+    ///       server-name/
+    ///         toolName.ts        ← individual tool wrapper
+    ///         index.ts           ← re-exports all tools
+    /// </summary>
+    public async Task<string> GenerateToolFilesAsync()
+    {
+        // Create a temp workspace
+        _workspaceDir = Path.Combine(Path.GetTempPath(), "jarvis-code-mode", Guid.NewGuid().ToString("N")[..8]);
+        Directory.CreateDirectory(_workspaceDir);
+        _logger.LogInformation("Code Mode workspace: {Dir}", _workspaceDir);
+
+        // Write the bridge module
+        var bridgePath = Path.Combine(_workspaceDir, "__mcp_bridge.ts");
+        await File.WriteAllTextAsync(bridgePath, GenerateBridgeModule());
+
+        // Write a tsconfig for the workspace
+        var tsconfigPath = Path.Combine(_workspaceDir, "tsconfig.json");
+        await File.WriteAllTextAsync(tsconfigPath, @"{
+  ""compilerOptions"": {
+    ""target"": ""ES2020"",
+    ""module"": ""ESNext"",
+    ""moduleResolution"": ""node"",
+    ""esModuleInterop"": true,
+    ""strict"": false,
+    ""outDir"": ""./dist"",
+    ""rootDir"": "".""
+  }
+}");
+
+        // Generate tool files for each connected server
+        var serversDir = Path.Combine(_workspaceDir, "servers");
+        Directory.CreateDirectory(serversDir);
+
+        var allTools = await _mcp.GetAllToolsAsync();
+        var toolsByServer = allTools.GroupBy(t => t.ServerName);
+
+        foreach (var serverGroup in toolsByServer)
+        {
+            var serverName = SanitizeName(serverGroup.Key);
+            var serverDir = Path.Combine(serversDir, serverName);
+            Directory.CreateDirectory(serverDir);
+
+            var toolExports = new List<string>();
+
+            foreach (var toolWithServer in serverGroup)
+            {
+                var tool = toolWithServer.Tool;
+                if (string.IsNullOrEmpty(tool.Name)) continue;
+
+                var toolFileName = SanitizeToolName(tool.Name);
+                var toolFilePath = Path.Combine(serverDir, $"{toolFileName}.ts");
+                var toolContent = GenerateToolFile(serverName, tool);
+                await File.WriteAllTextAsync(toolFilePath, toolContent);
+
+                toolExports.Add(toolFileName);
+                _logger.LogDebug("Generated tool file: servers/{Server}/{Tool}.ts", serverName, toolFileName);
+            }
+
+            // Generate index.ts that re-exports all tools
+            var indexContent = new StringBuilder();
+            foreach (var export in toolExports)
+            {
+                indexContent.AppendLine($"export {{ {export} }} from './{export}';");
+            }
+            await File.WriteAllTextAsync(Path.Combine(serverDir, "index.ts"), indexContent.ToString());
+        }
+
+        _logger.LogInformation("Generated tool files for {ServerCount} servers, {ToolCount} tools",
+            toolsByServer.Count(), allTools.Count);
+
+        return _workspaceDir;
+    }
+
+    /// <summary>
+    /// Returns a summary of available servers and their tool files for system prompt inclusion.
+    /// This is the "filesystem" the LLM will navigate.
+    /// </summary>
+    public async Task<string> GetToolTreeSummaryAsync()
+    {
+        if (_workspaceDir == null)
+        {
+            await GenerateToolFilesAsync();
+        }
+
+        var sb = new StringBuilder();
+        var serversDir = Path.Combine(_workspaceDir!, "servers");
+
+        if (!Directory.Exists(serversDir)) return "No servers available.";
+
+        foreach (var serverDir in Directory.GetDirectories(serversDir))
+        {
+            var serverName = Path.GetFileName(serverDir);
+            sb.AppendLine($"  {serverName}/");
+
+            foreach (var toolFile in Directory.GetFiles(serverDir, "*.ts"))
+            {
+                var fileName = Path.GetFileName(toolFile);
+                if (fileName == "index.ts") continue;
+                sb.AppendLine($"    {fileName}");
+            }
+        }
+
+        return sb.ToString();
+    }
+
+    /// <summary>
+    /// Searches available tools by keyword. Returns matching tool file contents.
+    /// Used by the search_tools function the LLM can call.
+    /// </summary>
+    public async Task<string> SearchToolsAsync(string query, string detailLevel = "full")
+    {
+        var allTools = await _mcp.GetAllToolsAsync();
+        var queryLower = query.ToLowerInvariant();
+
+        var matches = allTools.Where(t =>
+            (t.Tool.Name?.ToLowerInvariant().Contains(queryLower) ?? false) ||
+            (t.Tool.Description?.ToLowerInvariant().Contains(queryLower) ?? false) ||
+            t.ServerName.ToLowerInvariant().Contains(queryLower)
+        ).ToList();
+
+        if (matches.Count == 0) return "No tools found matching the query.";
+
+        var sb = new StringBuilder();
+        sb.AppendLine($"Found {matches.Count} matching tool(s):");
+        sb.AppendLine();
+
+        foreach (var match in matches)
+        {
+            switch (detailLevel.ToLowerInvariant())
+            {
+                case "name":
+                    sb.AppendLine($"- {match.ServerName}/{match.Tool.Name}");
+                    break;
+                case "description":
+                    sb.AppendLine($"- {match.ServerName}/{match.Tool.Name}: {match.Tool.Description ?? "No description"}");
+                    break;
+                default: // "full"
+                    var serverName = SanitizeName(match.ServerName);
+                    var toolFileName = SanitizeToolName(match.Tool.Name);
+                    sb.AppendLine($"### {match.ServerName}/{match.Tool.Name}");
+                    sb.AppendLine($"Description: {match.Tool.Description ?? "No description"}");
+                    sb.AppendLine($"Import: `import {{ {toolFileName} }} from './servers/{serverName}';`");
+                    if (match.Tool.InputSchema.HasValue)
+                    {
+                        sb.AppendLine($"Input Schema: ```json\n{match.Tool.InputSchema.Value.GetRawText()}\n```");
+                    }
+                    sb.AppendLine();
+                    break;
+            }
+        }
+
+        return sb.ToString();
+    }
+
+    /// <summary>
+    /// Executes LLM-generated TypeScript code in a sandboxed Node.js process.
+    /// The code can import MCP tool wrappers from ./servers/ directory.
+    /// Tool calls are bridged back to .NET via stdin/stdout JSON-RPC.
+    /// Returns stdout output (what the LLM should see) and any errors.
+    /// </summary>
+    public async Task<CodeExecutionResult> ExecuteCodeAsync(string code, CancellationToken ct = default)
+    {
+        if (_workspaceDir == null)
+        {
+            await GenerateToolFilesAsync();
+        }
+
+        // Write the user code to a temp file
+        var codeFilePath = Path.Combine(_workspaceDir!, $"__exec_{Guid.NewGuid():N}.ts");
+        await File.WriteAllTextAsync(codeFilePath, code, ct);
+
+        _logger.LogInformation("Executing code in sandbox: {Path}", codeFilePath);
+        _logger.LogDebug("Code:\n{Code}", code);
+
+        var stdout = new StringBuilder();
+        var stderr = new StringBuilder();
+
+        try
+        {
+            var startInfo = new ProcessStartInfo
+            {
+                FileName = "npx",
+                Arguments = $"tsx \"{codeFilePath}\"",
+                WorkingDirectory = _workspaceDir,
+                UseShellExecute = false,
+                RedirectStandardInput = true,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true
+            };
+
+            // Set NODE_PATH so imports resolve
+            startInfo.EnvironmentVariables["NODE_PATH"] = _workspaceDir;
+
+            using var process = new Process { StartInfo = startInfo };
+            var outputDone = new TaskCompletionSource<bool>();
+            var errorDone = new TaskCompletionSource<bool>();
+
+            // Handle stdout — may contain both console.log output and bridge requests
+            var bridgeRequests = new ConcurrentQueue<string>();
+            
+            process.OutputDataReceived += (s, e) =>
+            {
+                if (e.Data == null)
+                {
+                    outputDone.TrySetResult(true);
+                    return;
+                }
+
+                // Check if this is a bridge request (JSON-RPC from the sandbox)
+                if (e.Data.StartsWith("__MCP_BRIDGE__:"))
+                {
+                    var requestJson = e.Data["__MCP_BRIDGE__:".Length..];
+                    bridgeRequests.Enqueue(requestJson);
+                    // Handle bridge call and write response to stdin
+                    _ = HandleBridgeRequestAsync(process, requestJson);
+                }
+                else
+                {
+                    stdout.AppendLine(e.Data);
+                }
+            };
+
+            process.ErrorDataReceived += (s, e) =>
+            {
+                if (e.Data == null)
+                {
+                    errorDone.TrySetResult(true);
+                    return;
+                }
+                // Filter out noisy tsx/node warnings
+                if (!e.Data.Contains("ExperimentalWarning") && !e.Data.Contains("--experimental"))
+                {
+                    stderr.AppendLine(e.Data);
+                }
+            };
+
+            process.Start();
+            process.BeginOutputReadLine();
+            process.BeginErrorReadLine();
+
+            // Wait for process completion with timeout
+            using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            timeoutCts.CancelAfter(TimeSpan.FromSeconds(_timeoutSeconds));
+
+            try
+            {
+                await process.WaitForExitAsync(timeoutCts.Token);
+                // Give a small window for remaining output
+                await Task.WhenAny(outputDone.Task, Task.Delay(2000, CancellationToken.None));
+                await Task.WhenAny(errorDone.Task, Task.Delay(1000, CancellationToken.None));
+            }
+            catch (OperationCanceledException)
+            {
+                if (!process.HasExited)
+                {
+                    process.Kill(entireProcessTree: true);
+                }
+
+                if (ct.IsCancellationRequested)
+                {
+                    return new CodeExecutionResult
+                    {
+                        Output = stdout.ToString(),
+                        Error = "Execution cancelled by user.",
+                        ExitCode = -1,
+                        TimedOut = false
+                    };
+                }
+
+                return new CodeExecutionResult
+                {
+                    Output = stdout.ToString(),
+                    Error = $"Execution timed out after {_timeoutSeconds} seconds.",
+                    ExitCode = -1,
+                    TimedOut = true
+                };
+            }
+
+            return new CodeExecutionResult
+            {
+                Output = stdout.ToString().TrimEnd(),
+                Error = stderr.ToString().TrimEnd(),
+                ExitCode = process.ExitCode,
+                TimedOut = false
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to execute code");
+            return new CodeExecutionResult
+            {
+                Output = "",
+                Error = $"Failed to start code execution: {ex.Message}",
+                ExitCode = -1,
+                TimedOut = false
+            };
+        }
+        finally
+        {
+            // Clean up the temp code file
+            try { File.Delete(codeFilePath); } catch { }
+        }
+    }
+
+    /// <summary>
+    /// Handles a bridge request from the sandboxed process.
+    /// The sandbox sends requests tagged with __MCP_BRIDGE__: prefix on stdout.
+    /// We execute the MCP tool call and write the response to the process's stdin.
+    /// </summary>
+    private async Task HandleBridgeRequestAsync(Process process, string requestJson)
+    {
+        try
+        {
+            var request = JsonDocument.Parse(requestJson);
+            var root = request.RootElement;
+
+            var id = root.GetProperty("id").GetInt32();
+            var toolName = root.GetProperty("tool").GetString()!;
+            var args = root.GetProperty("args");
+
+            _logger.LogInformation("Bridge call from sandbox: {ToolName}", toolName);
+
+            try
+            {
+                var result = await _mcp.CallToolByNameAsync(toolName, args);
+                var response = JsonSerializer.Serialize(new
+                {
+                    id,
+                    result = result
+                });
+
+                await process.StandardInput.WriteLineAsync($"__MCP_RESPONSE__:{response}");
+                await process.StandardInput.FlushAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Bridge tool call failed: {ToolName}", toolName);
+                var errorResponse = JsonSerializer.Serialize(new
+                {
+                    id,
+                    error = ex.Message
+                });
+
+                await process.StandardInput.WriteLineAsync($"__MCP_RESPONSE__:{errorResponse}");
+                await process.StandardInput.FlushAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to parse bridge request");
+        }
+    }
+
+    /// <summary>
+    /// Checks if Node.js is available on the system.
+    /// </summary>
+    public async Task<bool> IsNodeAvailableAsync()
+    {
+        try
+        {
+            var psi = new ProcessStartInfo
+            {
+                FileName = "node",
+                Arguments = "--version",
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                CreateNoWindow = true
+            };
+
+            using var proc = Process.Start(psi);
+            if (proc == null) return false;
+
+            var version = await proc.StandardOutput.ReadToEndAsync();
+            await proc.WaitForExitAsync();
+            _logger.LogInformation("Node.js version: {Version}", version.Trim());
+            return proc.ExitCode == 0;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Cleans up the workspace directory.
+    /// </summary>
+    public void Cleanup()
+    {
+        if (_workspaceDir != null && Directory.Exists(_workspaceDir))
+        {
+            try
+            {
+                Directory.Delete(_workspaceDir, recursive: true);
+                _logger.LogInformation("Cleaned up workspace: {Dir}", _workspaceDir);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to cleanup workspace: {Dir}", _workspaceDir);
+            }
+            _workspaceDir = null;
+        }
+    }
+
+    #region Code Generation
+
+    /// <summary>
+    /// Generates the bridge module (__mcp_bridge.ts) that tool wrappers import from.
+    /// This module handles communication between the sandbox and the .NET host.
+    /// </summary>
+    private string GenerateBridgeModule()
+    {
+        return @"// Auto-generated MCP Bridge Module
+// This module handles communication between the sandbox and the .NET host.
+// Tool wrappers import callMCPTool from this module.
+
+import { createInterface } from 'readline';
+
+let requestId = 0;
+const pendingRequests = new Map<number, { resolve: (value: any) => void; reject: (reason: any) => void }>();
+
+// Listen for responses from the .NET host on stdin
+const rl = createInterface({ input: process.stdin, terminal: false });
+rl.on('line', (line: string) => {
+    if (line.startsWith('__MCP_RESPONSE__:')) {
+        try {
+            const data = JSON.parse(line.slice('__MCP_RESPONSE__:'.length));
+            const pending = pendingRequests.get(data.id);
+            if (pending) {
+                pendingRequests.delete(data.id);
+                if (data.error) {
+                    pending.reject(new Error(data.error));
+                } else {
+                    pending.resolve(data.result);
+                }
+            }
+        } catch (e) {
+            // Ignore parse errors
+        }
+    }
+});
+
+/**
+ * Calls an MCP tool via the .NET host bridge.
+ * @param toolName - The full MCP tool name
+ * @param args - The arguments to pass to the tool
+ * @returns The tool result
+ */
+export async function callMCPTool<T = any>(toolName: string, args: any): Promise<T> {
+    const id = ++requestId;
+    
+    return new Promise<T>((resolve, reject) => {
+        pendingRequests.set(id, { resolve, reject });
+        
+        // Send request to .NET host via stdout with special prefix
+        const request = JSON.stringify({ id, tool: toolName, args });
+        process.stdout.write(`__MCP_BRIDGE__:${request}\n`);
+        
+        // Timeout after 30 seconds
+        setTimeout(() => {
+            if (pendingRequests.has(id)) {
+                pendingRequests.delete(id);
+                reject(new Error(`Tool call timed out: ${toolName}`));
+            }
+        }, 30000);
+    });
+}
+
+/**
+ * Extracts text content from an MCP tool result.
+ */
+export function extractText(result: any): string {
+    if (result?.content && Array.isArray(result.content)) {
+        return result.content
+            .filter((item: any) => item.type === 'text')
+            .map((item: any) => item.text)
+            .join('\n');
+    }
+    return JSON.stringify(result);
+}
+";
+    }
+
+    /// <summary>
+    /// Generates a TypeScript wrapper file for a single MCP tool.
+    /// </summary>
+    private string GenerateToolFile(string serverName, McpTool tool)
+    {
+        var functionName = SanitizeToolName(tool.Name);
+        var description = tool.Description?.Replace("*/", "* /") ?? "No description available";
+
+        // Generate TypeScript interface from input schema
+        var inputInterface = GenerateInputInterface(tool);
+        var inputTypeName = $"{Capitalize(functionName)}Input";
+
+        var sb = new StringBuilder();
+        sb.AppendLine($"// Auto-generated tool wrapper for: {tool.Name}");
+        sb.AppendLine($"// Server: {serverName}");
+        sb.AppendLine($"import {{ callMCPTool, extractText }} from '../../__mcp_bridge';");
+        sb.AppendLine();
+        sb.AppendLine(inputInterface);
+        sb.AppendLine();
+        sb.AppendLine($"/**");
+        sb.AppendLine($" * {description}");
+        sb.AppendLine($" */");
+        sb.AppendLine($"export async function {functionName}(input: {inputTypeName}): Promise<any> {{");
+        sb.AppendLine($"    return callMCPTool('{tool.Name}', input);");
+        sb.AppendLine($"}}");
+
+        return sb.ToString();
+    }
+
+    /// <summary>
+    /// Generates a TypeScript interface from an MCP tool's input schema.
+    /// </summary>
+    private string GenerateInputInterface(McpTool tool)
+    {
+        var functionName = SanitizeToolName(tool.Name);
+        var typeName = $"{Capitalize(functionName)}Input";
+        var sb = new StringBuilder();
+        sb.AppendLine($"export interface {typeName} {{");
+
+        if (tool.InputSchema.HasValue)
+        {
+            var schema = tool.InputSchema.Value;
+            var requiredFields = new HashSet<string>();
+
+            if (schema.TryGetProperty("required", out var requiredArray))
+            {
+                foreach (var req in requiredArray.EnumerateArray())
+                {
+                    requiredFields.Add(req.GetString() ?? "");
+                }
+            }
+
+            if (schema.TryGetProperty("properties", out var properties))
+            {
+                foreach (var prop in properties.EnumerateObject())
+                {
+                    var tsType = JsonSchemaToTypeScript(prop.Value);
+                    var optional = requiredFields.Contains(prop.Name) ? "" : "?";
+                    var propDescription = "";
+                    if (prop.Value.TryGetProperty("description", out var desc))
+                    {
+                        propDescription = $" // {desc.GetString()}";
+                    }
+                    sb.AppendLine($"    {prop.Name}{optional}: {tsType};{propDescription}");
+                }
+            }
+        }
+
+        sb.AppendLine("}");
+        return sb.ToString();
+    }
+
+    /// <summary>
+    /// Converts JSON Schema type to TypeScript type.
+    /// </summary>
+    private string JsonSchemaToTypeScript(JsonElement schema)
+    {
+        if (!schema.TryGetProperty("type", out var typeProp))
+        {
+            return "any";
+        }
+
+        return typeProp.GetString() switch
+        {
+            "string" => "string",
+            "number" => "number",
+            "integer" => "number",
+            "boolean" => "boolean",
+            "array" => schema.TryGetProperty("items", out var items) 
+                ? $"{JsonSchemaToTypeScript(items)}[]" 
+                : "any[]",
+            "object" => "Record<string, any>",
+            _ => "any"
+        };
+    }
+
+    /// <summary>
+    /// Sanitizes a server name for use as a directory name.
+    /// </summary>
+    private static string SanitizeName(string name)
+    {
+        // Replace invalid chars with hyphens, lowercase
+        var result = new StringBuilder();
+        foreach (var c in name.ToLowerInvariant())
+        {
+            if (char.IsLetterOrDigit(c) || c == '-' || c == '_')
+            {
+                result.Append(c);
+            }
+            else if (c == ' ' || c == '.')
+            {
+                result.Append('-');
+            }
+        }
+        return result.Length > 0 ? result.ToString() : "unknown";
+    }
+
+    /// <summary>
+    /// Sanitizes a tool name for use as a valid TypeScript function/file name.
+    /// MCP tool names often use patterns like "server__tool_name" or "server/tool_name".
+    /// </summary>
+    private static string SanitizeToolName(string name)
+    {
+        // Remove common prefixes (server__) and convert to camelCase-friendly name
+        var result = new StringBuilder();
+        bool capitalizeNext = false;
+
+        foreach (var c in name)
+        {
+            if (char.IsLetterOrDigit(c))
+            {
+                result.Append(capitalizeNext ? char.ToUpperInvariant(c) : c);
+                capitalizeNext = false;
+            }
+            else
+            {
+                capitalizeNext = result.Length > 0; // Don't capitalize the first char
+            }
+        }
+
+        var str = result.ToString();
+        // Ensure it starts with a letter
+        if (str.Length > 0 && char.IsDigit(str[0]))
+        {
+            str = "_" + str;
+        }
+        return str.Length > 0 ? str : "unknownTool";
+    }
+
+    private static string Capitalize(string s) =>
+        string.IsNullOrEmpty(s) ? s : char.ToUpperInvariant(s[0]) + s[1..];
+
+    #endregion
+}
+
+/// <summary>
+/// Result of executing code in the sandboxed environment.
+/// </summary>
+public class CodeExecutionResult
+{
+    /// <summary>
+    /// Standard output from the code execution (what gets returned to the LLM).
+    /// </summary>
+    public string Output { get; set; } = "";
+
+    /// <summary>
+    /// Standard error output (syntax errors, runtime errors, etc.)
+    /// </summary>
+    public string Error { get; set; } = "";
+
+    /// <summary>
+    /// Process exit code. 0 = success.
+    /// </summary>
+    public int ExitCode { get; set; }
+
+    /// <summary>
+    /// Whether the execution was killed due to timeout.
+    /// </summary>
+    public bool TimedOut { get; set; }
+
+    /// <summary>
+    /// Whether the execution completed successfully.
+    /// </summary>
+    public bool Success => ExitCode == 0 && !TimedOut;
+
+    /// <summary>
+    /// Returns a formatted result string suitable for returning to the LLM.
+    /// </summary>
+    public string ToResultString()
+    {
+        var sb = new StringBuilder();
+
+        if (!string.IsNullOrEmpty(Output))
+        {
+            sb.AppendLine(Output);
+        }
+
+        if (!string.IsNullOrEmpty(Error))
+        {
+            sb.AppendLine($"\n[stderr]\n{Error}");
+        }
+
+        if (TimedOut)
+        {
+            sb.AppendLine("\n[TIMED OUT]");
+        }
+        else if (ExitCode != 0)
+        {
+            sb.AppendLine($"\n[Exit code: {ExitCode}]");
+        }
+
+        return sb.ToString().TrimEnd();
+    }
+}
