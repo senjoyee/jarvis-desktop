@@ -566,6 +566,11 @@ export function extractText(result: any): string {
         var sb = new StringBuilder();
         sb.AppendLine($"// Auto-generated tool wrapper for: {tool.Name}");
         sb.AppendLine($"// Server: {serverName}");
+        sb.AppendLine($"// ");
+        sb.AppendLine($"// IMPORT THIS FUNCTION AS:");
+        sb.AppendLine($"//   import {{ {functionName} }} from './servers/{SanitizeName(serverName)}';");
+        sb.AppendLine($"// ");
+        sb.AppendLine($"// NOTE: Function name is '{functionName}' (camelCase), NOT '{tool.Name}' (original MCP name)");
         sb.AppendLine($"import {{ callMCPTool, extractText }} from '../../__mcp_bridge';");
         sb.AppendLine();
         sb.AppendLine(inputInterface);
