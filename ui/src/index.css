@@ -1,3 +1,30 @@
+/* ============================================================
+   Typography Variables — Consolidated at top for single source of truth
+   ============================================================ */
+:root {
+  /* UI body text — clean, optimised for screen readability */
+  --font-base: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+
+  /* Headings & display — geometric, distinctive */
+  --font-display: 'Space Grotesk', sans-serif;
+
+  /* Thinking / reasoning block — editorial serif */
+  --font-thinking: 'Source Serif 4', Georgia, serif;
+
+  /* Code & logs — developer-grade mono */
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+
+  /* Color tokens */
+  --bg-primary: #212121;
+  --bg-secondary: #222222;
+  --text-primary: #e4e4e7;
+  --text-secondary: #a1a1aa;
+}
+
+
+/* ============================================================
+   Reset & Global
+   ============================================================ */
 * {
   margin: 0;
   padding: 0;
@@ -13,13 +40,19 @@ body,
 }
 
 body {
-  font-family: 'Geist Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  background-color: #212121;
-  color: #ececec;
+  font-family: var(--font-base);
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
   font-size: 15px;
-  line-height: 1.6;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
+
+/* ============================================================
+   Scrollbars
+   ============================================================ */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
@@ -38,11 +71,19 @@ body {
   background: #666;
 }
 
+
+/* ============================================================
+   App Layout
+   ============================================================ */
 .app-layout {
   display: flex;
   height: 100vh;
 }
 
+
+/* ============================================================
+   Sidebar
+   ============================================================ */
 .sidebar {
   width: 280px;
   min-width: 280px;
@@ -52,11 +93,12 @@ body {
   flex-direction: column;
   overflow: hidden;
   transition: width 0.2s ease-in-out, min-width 0.2s ease-in-out;
+  font-family: var(--font-base);
 }
 
 .sidebar.collapsed {
-  width: 64px;
-  min-width: 64px;
+  width: 48px;
+  min-width: 48px;
 }
 
 .sidebar-header {
@@ -65,21 +107,27 @@ body {
   display: flex;
   align-items: center;
   transition: all 0.2s ease;
+  padding: 12px 0;
+  flex-direction: column;
+  gap: 12px;
+  height: auto;
 }
 
 .sidebar:not(.collapsed) .sidebar-header {
-  padding: 16px;
   flex-direction: row;
+  padding: 16px;
   justify-content: space-between;
 }
 
 .sidebar.collapsed .sidebar-header {
-  padding: 12px 0;
-  flex-direction: column;
-  gap: 12px;
-  justify-content: flex-start;
+  padding: 16px 0;
+  justify-content: center;
   border-bottom: none;
-  /* Cleaner look */
+}
+
+.sidebar.collapsed .sidebar-header>span,
+.sidebar.collapsed .sidebar-header>button[title="New Chat"] {
+  display: none;
 }
 
 .sidebar-toggle-container {
@@ -88,15 +136,8 @@ body {
   justify-content: center;
 }
 
-
-.sidebar.collapsed .sidebar-header {
-  padding: 16px 0;
-  justify-content: center;
-}
-
-.sidebar.collapsed .sidebar-header>span,
-.sidebar.collapsed .sidebar-header>button[title="New Chat"] {
-  display: none;
+.sidebar:not(.collapsed) .sidebar-toggle-container button {
+  /* Toggle button always visible */
 }
 
 .sidebar-section {
@@ -105,20 +146,15 @@ body {
   font-weight: 600;
   text-transform: uppercase;
   color: #888;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.08em;
 }
 
 .sidebar.collapsed .sidebar-section {
-  text-align: center;
-  padding: 12px 0 8px;
-}
-
-.sidebar.collapsed .sidebar-section>span:first-of-type {
   display: none;
 }
 
 .sidebar.collapsed .server-badge {
-  margin-left: 0 !important;
+  display: none;
 }
 
 .sidebar-content {
@@ -157,7 +193,9 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 14px;
+  font-size: 13.5px;
+  font-weight: 450;
+  letter-spacing: -0.005em;
 }
 
 .sidebar.collapsed .conversation-title {
@@ -172,6 +210,26 @@ body {
   display: none;
 }
 
+.app-title {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 15px;
+  margin-left: 8px;
+  letter-spacing: -0.01em;
+}
+
+.sidebar.collapsed .app-title {
+  display: none;
+}
+
+.sidebar.collapsed .new-chat-btn {
+  display: flex !important;
+}
+
+
+/* ============================================================
+   Main Content Area
+   ============================================================ */
 .main-content {
   flex: 1;
   display: flex;
@@ -190,7 +248,7 @@ body {
   flex: 1;
   overflow-y: auto;
   padding: 24px 20px;
-  background-color: #212121;
+  background-color: var(--bg-primary);
 }
 
 .message {
@@ -212,13 +270,17 @@ body {
   border: none;
 }
 
+
+/* ============================================================
+   Message Typography
+   ============================================================ */
 .message-role {
   display: none;
 }
 
 .message-content {
-  line-height: 1.7;
-  color: #ececec;
+  line-height: 1.65;
+  color: var(--text-primary);
 }
 
 .message-content p {
@@ -227,6 +289,58 @@ body {
 
 .message-content p:last-child {
   margin-bottom: 0;
+}
+
+/* User Messages */
+.message.user .message-content {
+  font-family: var(--font-base);
+  font-size: 15px;
+  font-weight: 400;
+  line-height: 1.5;
+  background-color: #27272a;
+  color: #fff;
+  border-radius: 12px;
+  padding: 10px 14px;
+  display: inline-block;
+}
+
+/* Assistant Messages */
+.message.assistant .message-content {
+  font-family: var(--font-base);
+  font-weight: 400;
+  font-size: 15px;
+  line-height: 1.65;
+  color: var(--text-primary);
+  letter-spacing: normal;
+}
+
+/* Assistant Headings */
+.message.assistant h1,
+.message.assistant h2,
+.message.assistant h3 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  margin-top: 1.5em;
+  margin-bottom: 0.5em;
+  color: #fff;
+  letter-spacing: -0.02em;
+}
+
+.message-model-tag {
+  margin-left: 8px;
+  font-weight: 400;
+  opacity: 0.7;
+}
+
+
+/* ============================================================
+   Code — Monospace
+   ============================================================ */
+code,
+pre {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.5;
 }
 
 .message-content pre {
@@ -239,7 +353,7 @@ body {
 }
 
 .message-content code {
-  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-family: var(--font-mono);
   font-size: 13px;
 }
 
@@ -247,9 +361,13 @@ body {
   background-color: #404040;
   padding: 2px 6px;
   border-radius: 4px;
-  font-size: 14px;
+  font-size: 13.5px;
 }
 
+
+/* ============================================================
+   Tables (Markdown)
+   ============================================================ */
 .message-content table {
   border-collapse: collapse;
   width: 100%;
@@ -273,10 +391,14 @@ body {
   background-color: rgba(255, 255, 255, 0.03);
 }
 
+
+/* ============================================================
+   Composer (Input Area)
+   ============================================================ */
 .composer {
   padding: 16px 20px 24px;
   border-top: none;
-  background-color: #212121;
+  background-color: var(--bg-primary);
 }
 
 .composer-inner {
@@ -303,9 +425,11 @@ body {
   border-radius: 8px;
   background-color: #1e1e1e;
   color: #e0e0e0;
-  font-size: 14px;
+  font-size: 15px;
+  font-family: var(--font-base);
+  font-weight: 400;
+  line-height: 1.5;
   resize: none;
-  font-family: inherit;
 }
 
 .composer-input textarea:focus {
@@ -320,12 +444,10 @@ body {
   flex-wrap: wrap;
 }
 
-.message-model-tag {
-  margin-left: 8px;
-  font-weight: 400;
-  opacity: 0.7;
-}
 
+/* ============================================================
+   Empty State
+   ============================================================ */
 .empty-state {
   display: flex;
   flex-direction: column;
@@ -338,10 +460,19 @@ body {
 }
 
 .empty-state h2 {
-  margin-bottom: 8px;
-  color: #e0e0e0;
+  font-family: var(--font-base);
+  font-weight: 400;
+  font-size: 28px;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  color: #d4d4d8;
+  margin-bottom: 24px;
 }
 
+
+/* ============================================================
+   Settings & MCP Pages
+   ============================================================ */
 .settings-page,
 .mcp-page {
   padding: 32px;
@@ -359,6 +490,8 @@ body {
   margin-bottom: 16px;
   font-size: 16px;
   font-weight: 600;
+  font-family: var(--font-display);
+  letter-spacing: -0.01em;
 }
 
 .form-group {
@@ -370,6 +503,7 @@ body {
   margin-bottom: 6px;
   font-size: 13px;
   color: #888;
+  font-weight: 500;
 }
 
 .form-group input,
@@ -380,6 +514,7 @@ body {
   border-radius: 6px;
   background-color: #1e1e1e;
   color: #e0e0e0;
+  font-family: var(--font-base);
   font-size: 14px;
 }
 
@@ -389,6 +524,10 @@ body {
   border-color: #0078d4;
 }
 
+
+/* ============================================================
+   MCP Server Cards
+   ============================================================ */
 .server-card {
   background-color: #2d2d30;
   border: 1px solid #3c3c3c;
@@ -410,10 +549,12 @@ body {
 }
 
 .server-status {
-  font-size: 12px;
+  font-size: 11.5px;
+  font-weight: 600;
   padding: 4px 8px;
   border-radius: 4px;
   text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 .server-status.connected {
@@ -476,7 +617,7 @@ body {
   padding: 12px;
   background-color: #1e1e1e;
   border-radius: 4px;
-  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-family: var(--font-mono);
   font-size: 12px;
   max-height: 200px;
   overflow-y: auto;
@@ -487,6 +628,10 @@ body {
   word-break: break-all;
 }
 
+
+/* ============================================================
+   Modals
+   ============================================================ */
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -513,6 +658,7 @@ body {
 
 .modal h2 {
   margin-bottom: 20px;
+  font-family: var(--font-display);
 }
 
 .modal-actions {
@@ -522,6 +668,10 @@ body {
   margin-top: 24px;
 }
 
+
+/* ============================================================
+   Nav Tabs
+   ============================================================ */
 .nav-tabs {
   display: flex;
   border-bottom: 1px solid #3c3c3c;
@@ -533,6 +683,7 @@ body {
   cursor: pointer;
   border-bottom: 2px solid transparent;
   color: #888;
+  font-weight: 500;
   transition: all 0.15s;
 }
 
@@ -545,12 +696,15 @@ body {
   border-bottom-color: #0078d4;
 }
 
-/* Reasoning / Thinking block */
+
+/* ============================================================
+   Reasoning / Thinking Block
+   ============================================================ */
 .reasoning-block {
   margin-bottom: 12px;
   border: 1px solid #3c3c3c;
   border-radius: 8px;
-  background-color: #1e1e2e;
+  background-color: #1a1b1e;
   overflow: hidden;
 }
 
@@ -562,34 +716,35 @@ body {
   padding: 10px 14px;
   background: none;
   border: none;
-  color: #a0a0b8;
+  color: #94949e;
   cursor: pointer;
   font-size: 13px;
-  font-family: inherit;
+  font-family: var(--font-base);
+  font-weight: 500;
   text-align: left;
   transition: background-color 0.15s;
 }
 
 .reasoning-toggle:hover {
-  background-color: #2a2a3a;
+  background-color: rgba(255, 255, 255, 0.03);
 }
 
 .reasoning-label {
   font-weight: 600;
-  color: #b8b8d0;
+  color: #d1d1f0;
 }
 
 .reasoning-content {
-  font-family: var(--font-serif);
+  font-family: var(--font-thinking);
   padding: 0 14px 14px;
-  font-size: 13px;
-  line-height: 1.6;
-  color: #c0c0d8;
+  font-size: 14.5px;
+  line-height: 1.7;
+  color: #d0d0e0;
   white-space: pre-wrap;
   word-break: break-word;
   max-height: 400px;
   overflow-y: auto;
-  border-top: 1px solid #2a2a3a;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
   margin-top: 0;
   padding-top: 10px;
 }
@@ -611,7 +766,10 @@ body {
   }
 }
 
-/* Tool call blocks */
+
+/* ============================================================
+   Tool Call Blocks
+   ============================================================ */
 .tool-calls-section {
   display: flex;
   flex-direction: column;
@@ -645,7 +803,7 @@ body {
   color: #b0b0b0;
   cursor: pointer;
   font-size: 11px;
-  font-family: inherit;
+  font-family: var(--font-base);
   text-align: left;
   transition: background-color 0.15s;
 }
@@ -661,7 +819,8 @@ body {
 .tool-call-name {
   font-weight: 600;
   color: #6cb86c;
-  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
 }
 
 .tool-call-details {
@@ -682,7 +841,7 @@ body {
   font-weight: 600;
   text-transform: uppercase;
   color: #888;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.06em;
   margin-bottom: 6px;
 }
 
@@ -691,7 +850,7 @@ body {
   border: 1px solid #333;
   border-radius: 4px;
   padding: 10px 12px;
-  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-family: var(--font-mono);
   font-size: 12px;
   color: #c8c8c8;
   white-space: pre-wrap;
@@ -705,20 +864,24 @@ body {
   background-color: #dc3545;
   color: white;
   font-size: 10px;
+  font-weight: 600;
   padding: 2px 6px;
   border-radius: 3px;
   margin-left: 6px;
   vertical-align: middle;
 }
 
-/* Token Usage Display */
+
+/* ============================================================
+   Token Usage
+   ============================================================ */
 .token-usage {
   display: flex;
   flex-wrap: wrap;
   gap: 14px;
   margin-top: 10px;
   padding: 8px 12px;
-  font-size: 12px;
+  font-size: 11.5px;
   color: #888;
   background-color: rgba(0, 0, 0, 0.2);
   border-radius: 6px;
@@ -747,11 +910,14 @@ body {
   border-left: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-/* Chat Header */
+
+/* ============================================================
+   Chat Header
+   ============================================================ */
 .chat-header {
   padding: 16px 20px;
   border-bottom: 1px solid #3c3c3c;
-  background-color: #212121;
+  background-color: var(--bg-primary);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -764,312 +930,71 @@ body {
 }
 
 .chat-title {
+  font-family: var(--font-base);
   font-size: 16px;
   font-weight: 600;
+  letter-spacing: -0.01em;
   margin: 0;
-  color: #ececec;
+  color: var(--text-primary);
 }
 
-/* Override Fluent UI Menu for Delete item */
+
+/* ============================================================
+   Delete menu
+   ============================================================ */
 .delete-menu-item span {
   color: #ff6b6b !important;
-  /* Make delete red */
 }
 
 
-/* Refined Sidebar */
-.app-title {
-  font-weight: 600;
-  font-size: 16px;
-  margin-left: 8px;
-}
-
-.sidebar.collapsed {
-  width: 48px;
-  /* Narrower rail */
-  min-width: 48px;
-}
-
-.sidebar-header {
-  padding: 12px 0;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-  height: auto;
-}
-
-.sidebar:not(.collapsed) .sidebar-header {
-  flex-direction: row;
-  padding: 16px;
-  justify-content: space-between;
-}
-
-.sidebar:not(.collapsed) .sidebar-toggle-container button {
-  /* Hide the toggle button when expanded OR we can keep it. 
-     The user screenshot shows it on top. Let's keep it visible always. */
-}
-
-/* Adjust layout when collapsed */
-.sidebar.collapsed .sidebar-header {
-  border-bottom: none;
-}
-
-.sidebar.collapsed .app-title {
-  display: none;
-}
-
-.sidebar.collapsed .new-chat-btn {
-  /* Icon only button */
-}
-
-/* Center items in collapsed sidebar */
-.sidebar.collapsed .conversation-item {
-  justify-content: center;
-  padding: 10px 0;
-}
-
-.sidebar.collapsed .sidebar-section {
-  display: none;
-  /* Hide section headers */
-}
-
-.sidebar.collapsed .server-badge {
-  display: none;
-}
-
-.sidebar.collapsed .delete-btn {
-  display: none;
-}
-
-/* Ensure New Chat button is visible in collapsed mode */
-.sidebar.collapsed .new-chat-btn {
-  display: flex !important;
-}
-
-
-/* Typography Overhaul - Claude Vibes */
-:root {
-  --font-base: 'Geist Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --font-serif: 'Source Serif 4', serif;
-  --font-display: 'Newsreader', 'Start Serif 4', serif;
-
-  --bg-primary: #212121;
-  /* Unified background color */
-  --bg-secondary: #212226;
-  --text-primary: #e6e6e6;
-  --text-secondary: #9da3ae;
-}
-
-body {
-  font-family: var(--font-base);
-  background-color: var(--bg-primary);
-  color: var(--text-primary);
-  letter-spacing: -0.01em;
-  /* Modern tightness */
-}
-
-/* Chat Headers & Display Text */
-.empty-state h2 {
-  font-family: var(--font-display);
-  font-weight: 300;
-  /* Lighter weight for elegance */
-  font-size: 32px;
-  letter-spacing: -0.02em;
-  color: #d1d5db;
-  /* Softer white */
-  margin-bottom: 24px;
-}
-
-/* User Messages - Sans Serif, Clean */
-.message.user .message-content {
-  font-family: var(--font-base);
-  font-size: 15px;
-  line-height: 1.5;
-  color: #fff;
-  background-color: #2b2d31;
-  /* Subtle bubble */
-  padding: 10px 14px;
-  border-radius: 12px;
-  display: inline-block;
-}
-
-/* Assistant Messages - Sans Serif, Clean */
-.message.assistant .message-content {
-  font-family: var(--font-base);
-  font-size: 15px;
-  line-height: 1.6;
-  color: #ececec;
-  font-weight: 400;
-}
-
-/* Specific overrides for Assistant Headers/Code */
-.message.assistant h1,
-.message.assistant h2,
-.message.assistant h3 {
-  font-family: var(--font-display);
-  font-weight: 500;
-  margin-top: 1.5em;
-  margin-bottom: 0.5em;
-  color: #fff;
-}
-
-/* Input Area - Sans Serif */
-.composer textarea {
-  font-family: var(--font-base);
-  font-size: 15px;
-  line-height: 1.5;
-}
-
-/* Chat Title */
-.chat-title {
-  font-family: var(--font-base);
-  /* Keep title clean sans-serif */
-  font-weight: 600;
-  letter-spacing: -0.01em;
-}
-
-/* Sidebar - Sans Serif */
-.sidebar {
-  font-family: var(--font-base);
-}
-
-/* Code Blocks - Monospace */
-code,
-pre {
-  font-family: 'JetBrains Mono', 'Fira Code', monospace;
-  font-size: 13px;
-}
-
-
-/* Typography - Precise Replication (Best Match) */
-:root {
-  /* UI: Clean sans-serif */
-  --font-base: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-
-  /* Content: Editorial serif (Newsreader is closest to Tiempos/Anthropic Serif) */
-  --font-serif: 'Newsreader', 'Times New Roman', Times, serif;
-
-  /* Code: Developer grade mono */
-  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
-
-  --bg-primary: #212121;
-  /* Unified background color */
-  --bg-secondary: #222222;
-  --text-primary: #ececec;
-  --text-secondary: #a1a1aa;
-}
-
-body {
-  font-family: var(--font-base);
-  background-color: var(--bg-primary);
-  color: var(--text-primary);
-  line-height: 1.5;
-  -webkit-font-smoothing: antialiased;
-}
-
-/* Headers - 'Joyee is thinking' */
-.empty-state h2 {
-  font-family: var(--font-serif);
-  font-weight: 360;
-  /* Precision weight match */
-  font-size: 32px;
-  line-height: 1.2;
-  letter-spacing: -0.02em;
-  color: #d4d4d8;
-  /* Soft white */
-  margin-bottom: 24px;
-}
-
-/* Assistant Responses */
-.message.assistant .message-content {
-  font-family: var(--font-base);
-  font-weight: 400;
-  font-size: 15px;
-  line-height: 1.65;
-  color: #e4e4e7;
-  letter-spacing: normal;
-}
-
-/* User Messages */
-.message.user .message-content {
-  font-family: var(--font-base);
-  font-size: 15px;
-  line-height: 1.5;
-  background-color: #27272a;
-  color: #fff;
-  border-radius: 12px;
-  padding: 10px 14px;
-}
-
-/* Input Placeholder */
-.composer textarea {
-  font-family: var(--font-base);
-  font-size: 15px;
-  font-weight: 400;
-  line-height: 1.5;
-}
-
-/* Keep code blocks distinct */
-code,
-pre {
-  font-family: 'JetBrains Mono', 'Fira Code', monospace;
-  font-size: 13px;
-  line-height: 1.5;
-}
-
-
-
-/* --- New Composer & Layout Styles (Claude Replication) --- */
-
-/* 1. View Layouts */
+/* ============================================================
+   Centered View & Greeting (Claude-style)
+   ============================================================ */
 .chat-container.centered-view {
   display: flex;
   align-items: center;
   justify-content: center;
   height: 100%;
   background-color: var(--bg-primary);
-  /* Ensure consistent bg */
 }
 
 .centered-content {
   width: 100%;
   max-width: 750px;
-  /* Optimal reading width */
   display: flex;
   flex-direction: column;
   align-items: center;
   padding: 0 20px;
 }
 
-/* 2. Typography */
 .greeting-title {
   font-family: var(--font-display);
-  font-weight: 360;
+  font-weight: 340;
   font-size: 42px;
-  /* Large and elegant */
   color: #e8e8e8;
   margin-bottom: 40px;
   letter-spacing: -0.02em;
   text-align: center;
 }
 
-/* 3. Composer (Input Box) */
+
+/* ============================================================
+   New Composer (Claude-style Box)
+   ============================================================ */
 .composer-wrapper {
   width: 100%;
 }
 
 .composer-wrapper.centered {
   margin-bottom: 40px;
-  /* Space for footer items if needed */
 }
 
 .composer-wrapper.bottom {
   padding: 16px 20px 24px;
-  background-color: #212121;
+  background-color: var(--bg-primary);
   border-top: none;
 }
 
-/* The Box Itself */
 .composer-box {
   background-color: #2d2d2d;
   border: 1px solid #444;
@@ -1090,13 +1015,13 @@ pre {
   background-color: #333333;
 }
 
-/* Textarea */
 .composer-textarea {
   background: transparent;
   border: none;
-  color: #ececec;
+  color: var(--text-primary);
   font-family: var(--font-base);
-  font-size: 16px;
+  font-size: 15px;
+  font-weight: 400;
   line-height: 1.5;
   resize: none;
   width: 100%;
@@ -1113,12 +1038,14 @@ pre {
   color: #888;
 }
 
-/* Footer (Model Selector + Buttons) */
+
+/* ============================================================
+   Composer Footer
+   ============================================================ */
 .composer-footer {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  /* Add min-height to align items nicely */
   min-height: 32px;
 }
 
@@ -1127,14 +1054,12 @@ pre {
   align-items: center;
   gap: 12px;
   margin-left: auto;
-  /* Push to right */
 }
 
-/* Model Selector Button override */
 .model-selector-btn {
   color: #bbb !important;
   font-weight: 500 !important;
-  font-size: 13px !important;
+  font-size: 12.5px !important;
   background: transparent !important;
   border: 1px solid transparent !important;
   border-radius: 6px !important;
@@ -1145,7 +1070,6 @@ pre {
   color: #fff !important;
 }
 
-/* Send Button */
 .send-button {
   width: 32px;
   height: 32px;
@@ -1162,7 +1086,10 @@ pre {
   height: 16px;
 }
 
-/* API Warning styling */
+
+/* ============================================================
+   API Warning
+   ============================================================ */
 .api-key-warning {
   margin-top: 16px;
   color: #eab308;
@@ -1172,7 +1099,10 @@ pre {
   border-radius: 6px;
 }
 
-/* Code Mode Toggle */
+
+/* ============================================================
+   Code Mode Toggle
+   ============================================================ */
 .code-mode-toggle {
   display: flex;
   align-items: center;

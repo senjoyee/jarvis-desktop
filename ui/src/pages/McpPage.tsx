@@ -216,7 +216,7 @@ function ServerDetails({
         <div style={{
           fontSize: 12,
           color: '#888',
-          fontFamily: 'monospace',
+          fontFamily: 'var(--font-mono)',
           background: '#1e1e1e',
           padding: '8px 12px',
           borderRadius: 4,
@@ -334,7 +334,7 @@ function ToolRunnerModal({
           <Textarea
             value={argsJson}
             onChange={(_, data) => setArgsJson(data.value)}
-            style={{ fontFamily: 'monospace', minHeight: 100 }}
+            style={{ fontFamily: 'var(--font-mono)', minHeight: 100 }}
           />
         </div>
 
