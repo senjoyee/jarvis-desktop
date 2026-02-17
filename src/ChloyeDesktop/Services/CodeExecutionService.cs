@@ -705,13 +705,14 @@ export function extractText(result: any): string {
 
     /// <summary>
     /// Sanitizes tool descriptions to remove problematic Unicode characters.
-    /// Replaces Unicode bullets, box-drawing characters, etc. with ASCII equivalents.
+    /// Strips all non-ASCII characters to prevent encoding issues in TypeScript files.
     /// </summary>
     private static string SanitizeDescription(string? description)
     {
         if (string.IsNullOrEmpty(description)) return "";
         
-        return description
+        // First, try to replace known Unicode characters with ASCII equivalents
+        var result = description
             .Replace("*/", "* /") // Escape comment terminators
             .Replace("\u2022", "*") // Bullet points
             .Replace("\u2500", "-") // Box-drawing horizontal
@@ -736,6 +737,27 @@ export function extractText(result: any): string {
             .Replace("\u2026", "...") // Ellipsis
             .Replace("\u2013", "-") // En dash
             .Replace("\u2014", "--"); // Em dash
+        
+        // Then, strip any remaining non-ASCII characters (>127)
+        // This handles malformed UTF-8 sequences and other problematic chars
+        var sb = new StringBuilder();
+        foreach (var c in result)
+        {
+            if (c < 128) // Keep only ASCII characters
+            {
+                sb.Append(c);
+            }
+            else
+            {
+                // Replace any other Unicode char with a space
+                sb.Append(' ');
+            }
+        }
+        
+        // Clean up multiple spaces
+        result = System.Text.RegularExpressions.Regex.Replace(sb.ToString(), @"\s+", " ");
+        
+        return result;
     }
 
 
