@@ -557,7 +557,7 @@ export function extractText(result: any): string {
     private string GenerateToolFile(string serverName, McpTool tool)
     {
         var functionName = SanitizeToolName(tool.Name);
-        var description = tool.Description?.Replace("*/", "* /") ?? "No description available";
+        var description = SanitizeDescription(tool.Description) ?? "No description available";
 
         // Generate TypeScript interface from input schema
         var inputInterface = GenerateInputInterface(tool);
@@ -612,7 +612,7 @@ export function extractText(result: any): string {
                     var propDescription = "";
                     if (prop.Value.TryGetProperty("description", out var desc))
                     {
-                        propDescription = $" // {desc.GetString()}";
+                        propDescription = $" // {SanitizeDescription(desc.GetString())}";
                     }
                     sb.AppendLine($"    {prop.Name}{optional}: {tsType};{propDescription}");
                 }
@@ -702,6 +702,42 @@ export function extractText(result: any): string {
 
     private static string Capitalize(string s) =>
         string.IsNullOrEmpty(s) ? s : char.ToUpperInvariant(s[0]) + s[1..];
+
+    /// <summary>
+    /// Sanitizes tool descriptions to remove problematic Unicode characters.
+    /// Replaces Unicode bullets, box-drawing characters, etc. with ASCII equivalents.
+    /// </summary>
+    private static string SanitizeDescription(string? description)
+    {
+        if (string.IsNullOrEmpty(description)) return "";
+        
+        return description
+            .Replace("*/", "* /") // Escape comment terminators
+            .Replace("\u2022", "*") // Bullet points
+            .Replace("\u2500", "-") // Box-drawing horizontal
+            .Replace("\u250C", "+") // Box-drawing top-left
+            .Replace("\u2514", "+") // Box-drawing bottom-left
+            .Replace("\u251C", "+") // Box-drawing vertical-right
+            .Replace("\u2510", "+") // Box-drawing top-right
+            .Replace("\u2518", "+") // Box-drawing bottom-right
+            .Replace("\u252C", "+") // Box-drawing horizontal-down
+            .Replace("\u2524", "+") // Box-drawing vertical-left
+            .Replace("\u2534", "+") // Box-drawing horizontal-up
+            .Replace("\u253C", "+") // Box-drawing cross
+            .Replace("\u2502", "|") // Box-drawing vertical
+            .Replace("\u2192", "->") // Arrow right
+            .Replace("\u2190", "<-") // Arrow left
+            .Replace("\u2191", "^") // Arrow up
+            .Replace("\u2193", "v") // Arrow down
+            .Replace("\u201C", "\"") // Left double quote
+            .Replace("\u201D", "\"") // Right double quote
+            .Replace("\u2018", "'") // Left single quote
+            .Replace("\u2019", "'") // Right single quote
+            .Replace("\u2026", "...") // Ellipsis
+            .Replace("\u2013", "-") // En dash
+            .Replace("\u2014", "--"); // Em dash
+    }
+
 
     /// <summary>
     /// Resolves the correct executable name for the current platform.
