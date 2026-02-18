@@ -21,8 +21,8 @@ if ($Dev) {
     
     # Run WPF app with Dev environment variable
     Write-Host "[2/2] Launching WPF App with Dev Bridge..." -ForegroundColor Green
-    $env:CHLOYE_DEV_MODE="1"
-    Set-Location "$RootDir\src\ChloyeDesktop"
+    $env:JARVIS_DEV_MODE="1"
+    Set-Location "$RootDir\src\JarvisDesktop"
     dotnet run
 } else {
     Write-Host "==========================================" -ForegroundColor Cyan
@@ -42,6 +42,6 @@ if ($Dev) {
 
     # 2. Launch WPF Application
     Write-Host "[2/2] Running WPF Application..." -ForegroundColor Green
-    Set-Location "$RootDir\src\ChloyeDesktop"
+    Set-Location "$RootDir\src\JarvisDesktop"
     dotnet run
 }

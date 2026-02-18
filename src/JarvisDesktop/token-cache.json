@@ -1,0 +1,208 @@
+{
+  "access_token": "LBSESSIONID=\"b058eb090ffddca9\"; __VCAP_ID__=7d483ae8-4186-4419-6dca-a83b; IDP_USER=NzY0OTYwMzY0NjEyNjczNzM2MTEyNGJhOWEyM2NjMDQ%3D; __HOST-IDP_J_COOKIE=S-IDP-4a578a3c-a341-4c4b-b681-852b53c4dd4a; IDP_SESSION_MARKER_accounts=eyJhbGciOiJFQ0RILUVTK0EyNTZLVyIsImVuYyI6IkExMjhDQkMtSFMyNTYiLCJraWQiOm51bGwsImN0eSI6IkpXVCIsImVwayI6eyJrdHkiOiJFQyIsIngiOiI5ZjF3OE0wR1ltUV9DeDZUcGRCRHEtQnhZbTlqMHFCV0tOSDhIZnNBTTBFIiwieSI6InRfaXlFZHE0REh0ZFh1YnRGQ1NXTHRDeGdYRkJWUnU5bm1INFhHRm1wQkEiLCJjcnYiOiJQLTI1NiJ9fQ.Qatd0ck7tZAinuN-Jd8cKJJkHXw36KsXzwcRzYB6ME1GnBnhf8O-6g.PPX-BKAEyh0qF0Bfyhoz3g.qLVS6D2-QbOcTGev58zVNTXypZEEOaT48WgooIRj4wzmCCBf5z14P_emZ4gcFY_YQi8qjhF6dS2_yOYixC_18LUhiGFMH0SFIXPQpfSVknQ1U32VGiN8aXSSMVqq7EQFtr7m9do7nRyb2VQvnAvqi_a2BUgXMJIYrmy5Uvtj1zwGEhfRVY4ZjMBTXmfi0vAAsY1Nu63LLp6zBKlVujrFaAaA6JkASfXYxl9sSOKaWKXFY27d6KdpgA-hohgxj6RkIJKQarFZ4WjEh2_Rryva51dh1ayhJrVL9oKdntV-1MIgzCz_T7fzAt34Uxgo6SZHJsgBVdVB-MLimEljqOTq6d8gqSlvz-LEGTLAFWZxZ_AMyB359hTG5U60TT7fUVt0Wg3PU22-dJrSZUqd66p5aBuX1-UqsL63XoFJmjyXW_2gSXtrJdPNszA2He_SS5kGPAuuvXbjobZHqKg0B8h8XTM5FP9YflzEJii6C9u5FXqGTyGPA6CLjJko2qMEX48Hi9rlBJ5SfTI5dykI7bmNO4dpO5IVZzjzFnT3eJipHvdKGkfTFcOXxEZKQaXn_Ody.axPOjQtrb4jpy8biz6G0NA; __HOST-XSRF_COOKIE=_xP-FFQwg1swbWL-7f18ilvvaWQmb6paJWCvKoqkfFs6MTc3MTM3MjE5NjI1Nw; JSESSIONID=381F604C8BB749389A58F72723B6B445; X-Uaa-Csrf=Xpom9C7eoY1LNYrmt_TPJJ; JSESSIONID=s%3AYAo-Q5dKz5tIId5-I6q-rIqHDnDKzyJO.rmEYa5nA6CEqxxzCuXx3USKqTSpaZqTNR9iXGfTtz%2Fg; _octobus_va.adde7e0c-87ca-225a-65b3-2414318465db=1771372198.626; _octobus_id.adde7e0c-87ca-225a-65b3-2414318465db.178d=0856ee023cb78a22.1771372199.; _octobus_ses.adde7e0c-87ca-225a-65b3-2414318465db.178d=1; country=GB; s_plt=1.38; s_pltp=undefined; gig_canary=latest; TAsessionID=0ff38542-fbff-4320-93d5-b7def6d2d850|NEW; notice_behavior=expressed,eu; s_adbSession=62f1d192-771b-4692-9918-ba641e290a2b; coveo_visitorId=642905c0-10e2-45d2-9345-53aa28e12962",
+  "cookies": [
+    {
+      "name": "LBSESSIONID",
+      "value": "\"b058eb090ffddca9\"",
+      "domain": "me.sap.com",
+      "path": "/",
+      "expires": 1771458596.193062,
+      "httpOnly": true,
+      "secure": false,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "__VCAP_ID__",
+      "value": "7d483ae8-4186-4419-6dca-a83b",
+      "domain": "sapit-forme-prod.authentication.eu11.hana.ondemand.com",
+      "path": "/",
+      "expires": -1,
+      "httpOnly": true,
+      "secure": true,
+      "sameSite": "None"
+    },
+    {
+      "name": "IDP_USER",
+      "value": "NzY0OTYwMzY0NjEyNjczNzM2MTEyNGJhOWEyM2NjMDQ%3D",
+      "domain": ".accounts.sap.com",
+      "path": "/",
+      "expires": -1,
+      "httpOnly": true,
+      "secure": true,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "__HOST-IDP_J_COOKIE",
+      "value": "S-IDP-4a578a3c-a341-4c4b-b681-852b53c4dd4a",
+      "domain": "accounts.sap.com",
+      "path": "/",
+      "expires": -1,
+      "httpOnly": true,
+      "secure": true,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "IDP_SESSION_MARKER_accounts",
+      "value": "eyJhbGciOiJFQ0RILUVTK0EyNTZLVyIsImVuYyI6IkExMjhDQkMtSFMyNTYiLCJraWQiOm51bGwsImN0eSI6IkpXVCIsImVwayI6eyJrdHkiOiJFQyIsIngiOiI5ZjF3OE0wR1ltUV9DeDZUcGRCRHEtQnhZbTlqMHFCV0tOSDhIZnNBTTBFIiwieSI6InRfaXlFZHE0REh0ZFh1YnRGQ1NXTHRDeGdYRkJWUnU5bm1INFhHRm1wQkEiLCJjcnYiOiJQLTI1NiJ9fQ.Qatd0ck7tZAinuN-Jd8cKJJkHXw36KsXzwcRzYB6ME1GnBnhf8O-6g.PPX-BKAEyh0qF0Bfyhoz3g.qLVS6D2-QbOcTGev58zVNTXypZEEOaT48WgooIRj4wzmCCBf5z14P_emZ4gcFY_YQi8qjhF6dS2_yOYixC_18LUhiGFMH0SFIXPQpfSVknQ1U32VGiN8aXSSMVqq7EQFtr7m9do7nRyb2VQvnAvqi_a2BUgXMJIYrmy5Uvtj1zwGEhfRVY4ZjMBTXmfi0vAAsY1Nu63LLp6zBKlVujrFaAaA6JkASfXYxl9sSOKaWKXFY27d6KdpgA-hohgxj6RkIJKQarFZ4WjEh2_Rryva51dh1ayhJrVL9oKdntV-1MIgzCz_T7fzAt34Uxgo6SZHJsgBVdVB-MLimEljqOTq6d8gqSlvz-LEGTLAFWZxZ_AMyB359hTG5U60TT7fUVt0Wg3PU22-dJrSZUqd66p5aBuX1-UqsL63XoFJmjyXW_2gSXtrJdPNszA2He_SS5kGPAuuvXbjobZHqKg0B8h8XTM5FP9YflzEJii6C9u5FXqGTyGPA6CLjJko2qMEX48Hi9rlBJ5SfTI5dykI7bmNO4dpO5IVZzjzFnT3eJipHvdKGkfTFcOXxEZKQaXn_Ody.axPOjQtrb4jpy8biz6G0NA",
+      "domain": ".sap.com",
+      "path": "/",
+      "expires": -1,
+      "httpOnly": true,
+      "secure": true,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "__HOST-XSRF_COOKIE",
+      "value": "_xP-FFQwg1swbWL-7f18ilvvaWQmb6paJWCvKoqkfFs6MTc3MTM3MjE5NjI1Nw",
+      "domain": "accounts.sap.com",
+      "path": "/",
+      "expires": -1,
+      "httpOnly": true,
+      "secure": true,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "JSESSIONID",
+      "value": "381F604C8BB749389A58F72723B6B445",
+      "domain": "sapit-forme-prod.authentication.eu11.hana.ondemand.com",
+      "path": "/",
+      "expires": -1,
+      "httpOnly": true,
+      "secure": true,
+      "sameSite": "None"
+    },
+    {
+      "name": "X-Uaa-Csrf",
+      "value": "Xpom9C7eoY1LNYrmt_TPJJ",
+      "domain": "sapit-forme-prod.authentication.eu11.hana.ondemand.com",
+      "path": "/",
+      "expires": 1771458597.706364,
+      "httpOnly": true,
+      "secure": true,
+      "sameSite": "None"
+    },
+    {
+      "name": "JSESSIONID",
+      "value": "s%3AYAo-Q5dKz5tIId5-I6q-rIqHDnDKzyJO.rmEYa5nA6CEqxxzCuXx3USKqTSpaZqTNR9iXGfTtz%2Fg",
+      "domain": "me.sap.com",
+      "path": "/",
+      "expires": -1,
+      "httpOnly": true,
+      "secure": true,
+      "sameSite": "None"
+    },
+    {
+      "name": "_octobus_va.adde7e0c-87ca-225a-65b3-2414318465db",
+      "value": "1771372198.626",
+      "domain": "me.sap.com",
+      "path": "/",
+      "expires": -1,
+      "httpOnly": false,
+      "secure": true,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "_octobus_id.adde7e0c-87ca-225a-65b3-2414318465db.178d",
+      "value": "0856ee023cb78a22.1771372199.",
+      "domain": "me.sap.com",
+      "path": "/",
+      "expires": 1805932207.938439,
+      "httpOnly": false,
+      "secure": true,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "_octobus_ses.adde7e0c-87ca-225a-65b3-2414318465db.178d",
+      "value": "1",
+      "domain": "me.sap.com",
+      "path": "/",
+      "expires": 1771374007,
+      "httpOnly": false,
+      "secure": true,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "country",
+      "value": "GB",
+      "domain": ".sap.com",
+      "path": "/",
+      "expires": -1,
+      "httpOnly": false,
+      "secure": false,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "s_plt",
+      "value": "1.38",
+      "domain": ".sap.com",
+      "path": "/",
+      "expires": -1,
+      "httpOnly": false,
+      "secure": false,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "s_pltp",
+      "value": "undefined",
+      "domain": ".sap.com",
+      "path": "/",
+      "expires": -1,
+      "httpOnly": false,
+      "secure": false,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "gig_canary",
+      "value": "latest",
+      "domain": "cdns.gigya.com",
+      "path": "/",
+      "expires": 1771372798.883562,
+      "httpOnly": true,
+      "secure": true,
+      "sameSite": "None",
+      "partitionKey": "https://sap.com",
+      "_crHasCrossSiteAncestor": true
+    },
+    {
+      "name": "TAsessionID",
+      "value": "0ff38542-fbff-4320-93d5-b7def6d2d850|NEW",
+      "domain": ".me.sap.com",
+      "path": "/",
+      "expires": 1771373999,
+      "httpOnly": false,
+      "secure": true,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "notice_behavior",
+      "value": "expressed,eu",
+      "domain": ".me.sap.com",
+      "path": "/",
+      "expires": -1,
+      "httpOnly": false,
+      "secure": true,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "s_adbSession",
+      "value": "62f1d192-771b-4692-9918-ba641e290a2b",
+      "domain": "me.sap.com",
+      "path": "/",
+      "expires": -1,
+      "httpOnly": false,
+      "secure": false,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "coveo_visitorId",
+      "value": "642905c0-10e2-45d2-9345-53aa28e12962",
+      "domain": ".sap.com",
+      "path": "/",
+      "expires": 1802929158,
+      "httpOnly": false,
+      "secure": false,
+      "sameSite": "Lax"
+    }
+  ],
+  "expiresAt": 1771415410033
+}

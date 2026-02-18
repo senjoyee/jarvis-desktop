@@ -3,10 +3,10 @@
    ============================================================ */
 :root {
   /* UI body text — clean, optimised for screen readability */
-  --font-base: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-base: 'Söhne', 'ui-sans-serif', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 
   /* Thinking / reasoning block — editorial serif */
-  --font-thinking: 'Source Serif 4', Georgia, serif;
+  --font-thinking: var(--font-base);
 
   /* Code & logs — developer-grade mono */
   --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
@@ -291,7 +291,7 @@ body {
 /* User Messages */
 .message.user .message-content {
   font-family: var(--font-base);
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 400;
   line-height: 1.5;
   background-color: #27272a;
@@ -305,7 +305,7 @@ body {
 .message.assistant .message-content {
   font-family: var(--font-base);
   font-weight: 400;
-  font-size: 14px;
+  font-size: 13px;
   line-height: 1.65;
   color: var(--text-primary);
   letter-spacing: normal;
@@ -734,7 +734,7 @@ pre {
 .reasoning-content {
   font-family: var(--font-thinking);
   padding: 0 14px 14px;
-  font-size: 13.5px;
+  font-size: 13px;
   line-height: 1.7;
   color: #d0d0e0;
   white-space: pre-wrap;

@@ -14,7 +14,7 @@ export default defineConfig({
         strictPort: true,
     },
     build: {
-        outDir: '../src/ChloyeDesktop/wwwroot',
+        outDir: '../src/JarvisDesktop/wwwroot',
         emptyOutDir: true,
     },
 });
