@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "Ugl2AvjwBoQ=",
+  "dgSpecHash": "2tp+I5JifNQ=",
   "success": true,
-  "projectFilePath": "c:\\GenAI\\Chloye_desktop\\src\\JarvisDesktop\\JarvisDesktop.csproj",
+  "projectFilePath": "C:\\GenAI\\Jarvis_desktop\\src\\JarvisDesktop\\JarvisDesktop.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\joyee.sen\\.nuget\\packages\\microsoft.data.sqlite\\8.0.8\\microsoft.data.sqlite.8.0.8.nupkg.sha512",
     "C:\\Users\\joyee.sen\\.nuget\\packages\\microsoft.data.sqlite.core\\8.0.8\\microsoft.data.sqlite.core.8.0.8.nupkg.sha512",

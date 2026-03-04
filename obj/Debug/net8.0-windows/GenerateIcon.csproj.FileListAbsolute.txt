@@ -1,0 +1,4 @@
+C:\GenAI\Jarvis_desktop\obj\Debug\net8.0-windows\GenerateIcon.csproj.AssemblyReference.cache
+C:\GenAI\Jarvis_desktop\obj\Debug\net8.0-windows\src\JarvisDesktop\App.baml
+C:\GenAI\Jarvis_desktop\obj\Debug\net8.0-windows\src\JarvisDesktop\App.g.cs
+C:\GenAI\Jarvis_desktop\obj\Debug\net8.0-windows\GenerateIcon_MarkupCompile.cache

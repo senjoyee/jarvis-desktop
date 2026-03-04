@@ -143,7 +143,24 @@ export const useStore = create<AppState>((set, get) => ({
     set({ isLoading: true })
     try {
       const messages = await invoke<Message[]>('messages.list', { conversationId })
-      set({ messages, isLoading: false })
+      
+      // Parse metadata json into token usage
+      const parsedMessages = messages.map(msg => {
+        if (msg.metadataJson) {
+          try {
+            const metadata = JSON.parse(msg.metadataJson)
+            return {
+              ...msg,
+              tokenUsage: metadata
+            }
+          } catch (e) {
+            console.error('Failed to parse metadata JSON:', e)
+          }
+        }
+        return msg
+      })
+      
+      set({ messages: parsedMessages, isLoading: false })
     } catch (err) {
       console.error('Failed to load messages:', err)
       set({ isLoading: false })

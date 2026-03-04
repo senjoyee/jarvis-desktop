@@ -125,6 +125,23 @@ public class McpManager
                     serverConfig.Url = url.GetString();
                 }
 
+                // Support "serverUrl" as an alias for "url" (common in MCP configs)
+                if (config.TryGetProperty("serverUrl", out var serverUrl))
+                {
+                    serverConfig.Url = serverUrl.GetString();
+                    // Auto-detect type as "http" when serverUrl is used
+                    if (serverConfig.Type == "local")
+                    {
+                        serverConfig.Type = "http";
+                    }
+                }
+
+                // Parse custom headers (e.g., Authorization)
+                if (config.TryGetProperty("headers", out var headers))
+                {
+                    serverConfig.HeadersJson = headers.GetRawText();
+                }
+
                 if (config.TryGetProperty("args", out var args))
                 {
                     var argsList = new List<string>();

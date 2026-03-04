@@ -117,6 +117,27 @@ public class McpHttpConnection : McpConnection
         request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
         request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("text/event-stream"));
 
+        // Apply custom headers from config (e.g., Authorization)
+        if (!string.IsNullOrEmpty(Config.HeadersJson))
+        {
+            try
+            {
+                var customHeaders = JsonSerializer.Deserialize<Dictionary<string, string>>(Config.HeadersJson);
+                if (customHeaders != null)
+                {
+                    foreach (var (key, value) in customHeaders)
+                    {
+                        // Use TryAddWithoutValidation to support headers like Authorization
+                        request.Headers.TryAddWithoutValidation(key, value);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                AddLog($"Warning: Failed to parse custom headers: {ex.Message}");
+            }
+        }
+
         if (!string.IsNullOrEmpty(_sessionId))
         {
             request.Headers.Add("mcp-session-id", _sessionId);

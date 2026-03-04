@@ -20,6 +20,15 @@ public class Message
     public string? MetadataJson { get; set; }
 }
 
+public class TokenUsageMetadata
+{
+    public int InputTokens { get; set; }
+    public int OutputTokens { get; set; }
+    public int ReasoningTokens { get; set; }
+    public int TotalTokens { get; set; }
+    public decimal Cost { get; set; }
+}
+
 public class McpServerConfig
 {
     public Guid Id { get; set; }
@@ -37,6 +46,7 @@ public class McpServerConfig
     public string? Url { get; set; }
     public string? AuthType { get; set; } // none, bearer
     public string? AuthRef { get; set; } // credential manager key
+    public string? HeadersJson { get; set; } // JSON object of custom HTTP headers
     public bool Disabled { get; set; }
     
     public DateTime CreatedAt { get; set; }

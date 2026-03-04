@@ -205,4 +205,16 @@ public class ConversationService
         cmd.Parameters.AddWithValue("$content", content);
         cmd.ExecuteNonQuery();
     }
+
+    public void UpdateMessageMetadata(Guid messageId, string metadataJson)
+    {
+        using var conn = _db.GetConnection();
+        conn.Open();
+
+        var cmd = conn.CreateCommand();
+        cmd.CommandText = "UPDATE messages SET metadata_json = $metadata_json WHERE id = $id";
+        cmd.Parameters.AddWithValue("$id", messageId.ToString());
+        cmd.Parameters.AddWithValue("$metadata_json", metadataJson);
+        cmd.ExecuteNonQuery();
+    }
 }

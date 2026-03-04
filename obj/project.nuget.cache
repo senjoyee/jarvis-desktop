@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "dgSpecHash": "F5s4pHNOGek=",
+  "success": true,
+  "projectFilePath": "C:\\GenAI\\Jarvis_desktop\\GenerateIcon.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\joyee.sen\\.nuget\\packages\\microsoft.win32.systemevents\\8.0.0\\microsoft.win32.systemevents.8.0.0.nupkg.sha512",
+    "C:\\Users\\joyee.sen\\.nuget\\packages\\system.drawing.common\\8.0.4\\system.drawing.common.8.0.4.nupkg.sha512"
+  ],
+  "logs": []
+}

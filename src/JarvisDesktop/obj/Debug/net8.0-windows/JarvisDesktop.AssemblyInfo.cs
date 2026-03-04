@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("JarvisDesktop")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+c31a7d45cd3a2bf372a2e9e0ab17cda12ef4840c")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+88d6e16f4058b142aa1617c8c71baab1dea92f7e")]
 [assembly: System.Reflection.AssemblyProductAttribute("JarvisDesktop")]
 [assembly: System.Reflection.AssemblyTitleAttribute("JarvisDesktop")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

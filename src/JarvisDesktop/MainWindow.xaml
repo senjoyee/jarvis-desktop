@@ -6,7 +6,8 @@
         Height="800" Width="1200"
         MinHeight="600" MinWidth="800"
         WindowStartupLocation="CenterScreen"
-        Background="#1e1e1e">
+        Background="#1e1e1e"
+        Icon="Assets/icon.png">
     <Grid>
         <wv2:WebView2 x:Name="webView"/>
         <TextBlock x:Name="loadingText" 

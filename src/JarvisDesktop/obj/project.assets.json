@@ -1234,11 +1234,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "c:\\GenAI\\Chloye_desktop\\src\\JarvisDesktop\\JarvisDesktop.csproj",
+      "projectUniqueName": "C:\\GenAI\\Jarvis_desktop\\src\\JarvisDesktop\\JarvisDesktop.csproj",
       "projectName": "JarvisDesktop",
-      "projectPath": "c:\\GenAI\\Chloye_desktop\\src\\JarvisDesktop\\JarvisDesktop.csproj",
+      "projectPath": "C:\\GenAI\\Jarvis_desktop\\src\\JarvisDesktop\\JarvisDesktop.csproj",
       "packagesPath": "C:\\Users\\joyee.sen\\.nuget\\packages\\",
-      "outputPath": "c:\\GenAI\\Chloye_desktop\\src\\JarvisDesktop\\obj\\",
+      "outputPath": "C:\\GenAI\\Jarvis_desktop\\src\\JarvisDesktop\\obj\\",
       "projectStyle": "PackageReference",
       "configFilePaths": [
         "C:\\Users\\joyee.sen\\AppData\\Roaming\\NuGet\\NuGet.Config"
@@ -1310,7 +1310,7 @@
             "privateAssets": "none"
           }
         },
-        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\8.0.417/PortableRuntimeIdentifierGraph.json"
+        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\8.0.418/PortableRuntimeIdentifierGraph.json"
       }
     }
   }

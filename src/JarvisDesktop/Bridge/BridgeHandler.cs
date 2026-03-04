@@ -217,15 +217,15 @@ public class BridgeHandler
             conversationId = conversationId.ToString()
         });
 
+        // Accumulate token usage across tool-call loop iterations
+        int usageInput = 0, usageOutput = 0, usageReasoning = 0, usageTotal = 0;
+        decimal usageCost = 0;
+
         try
         {
             // Tool calling loop - continue until we get a final text response
             const int maxToolCalls = 30; // Prevent infinite loops
             var toolCallCount = 0;
-
-            // Accumulate token usage across tool-call loop iterations
-            int usageInput = 0, usageOutput = 0, usageReasoning = 0, usageTotal = 0;
-            decimal usageCost = 0;
 
             while (toolCallCount < maxToolCalls)
             {
@@ -395,6 +395,21 @@ public class BridgeHandler
 
             _conversations.UpdateMessageContent(assistantMessage.Id, fullContent.ToString());
             
+            // Save token metadata
+            if (usageTotal > 0)
+            {
+                var metadata = new TokenUsageMetadata
+                {
+                    InputTokens = usageInput,
+                    OutputTokens = usageOutput,
+                    ReasoningTokens = usageReasoning,
+                    TotalTokens = usageTotal,
+                    Cost = usageCost
+                };
+                var metadataJson = JsonSerializer.Serialize(metadata, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+                _conversations.UpdateMessageMetadata(assistantMessage.Id, metadataJson);
+            }
+            
             // Signal stream complete with token usage
             SendStreamEvent("stream.done", new
             {
@@ -446,7 +461,15 @@ public class BridgeHandler
                 assistantMessage.Role,
                 Content = fullContent.ToString(),
                 assistantMessage.Model,
-                assistantMessage.CreatedAt
+                assistantMessage.CreatedAt,
+                MetadataJson = usageTotal > 0 ? JsonSerializer.Serialize(new TokenUsageMetadata
+                {
+                    InputTokens = usageInput,
+                    OutputTokens = usageOutput,
+                    ReasoningTokens = usageReasoning,
+                    TotalTokens = usageTotal,
+                    Cost = usageCost
+                }, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }) : null
             }
         };
     }

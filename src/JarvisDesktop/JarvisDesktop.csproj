@@ -20,6 +20,7 @@
     <None Update="appsettings.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <Resource Include="Assets\icon.png" />
   </ItemGroup>
 
   <ItemGroup>
